@@ -120,7 +120,7 @@ const FAIXAS_COR_HEATMAP = [
 
 export default function DemoGraficosPage() {
   return (
-    <div className="animate-fade-in min-h-screen p-4 lg:p-6 space-y-6">
+    <div className="animate-fade-in p-4 lg:p-6 space-y-6">
       {/* Header */}
       <div>
         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">

@@ -29,6 +29,7 @@ export interface OpcoesFiltro {
   departamentos: string[];
   funcoes: string[];
   negocios: string[];
+  centrosCusto: string[];
 }
 
 /** Estado atual dos filtros aplicados */
@@ -38,4 +39,5 @@ export interface FiltrosState {
   departamento: string;
   funcao: string;
   negocio: string;
+  centroCusto: string;
 }

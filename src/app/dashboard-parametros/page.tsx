@@ -38,6 +38,7 @@ const FILTROS_INICIAIS: FiltrosState = {
   departamento: "",
   funcao: "",
   negocio: "",
+  centroCusto: "",
 };
 
 export default function DashboardParametrosPage() {
@@ -84,7 +85,7 @@ export default function DashboardParametrosPage() {
   }
 
   return (
-    <div className="animate-fade-in min-h-screen p-4 lg:p-6 space-y-6">
+    <div className="animate-fade-in p-4 lg:p-6 space-y-6">
       {/* Header com título e seletor de período */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
@@ -122,10 +123,6 @@ export default function DashboardParametrosPage() {
 
         return (
           <section key={grupo.grupo} className="space-y-3">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-              {grupo.label}
-            </h2>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {itensDoGrupo.map((parametro) => (
                 <ParametroCard

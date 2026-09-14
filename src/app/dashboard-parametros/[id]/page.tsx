@@ -18,6 +18,7 @@
 
 import { useState, useMemo } from "react";
 import { useParams, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import { parametrosRanking } from "@/data/mock-parametros-ranking";
@@ -53,6 +54,7 @@ const CORES_GRUPO: Record<
 export default function DetalhamentoParametroPage() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const parametroId = params.id as string;
   const mes = searchParams.get("mes") || "Julho";
@@ -84,7 +86,7 @@ export default function DetalhamentoParametroPage() {
   /* ---------- Estado de parâmetro não encontrado ---------- */
   if (!parametro) {
     return (
-      <div className="animate-fade-in min-h-screen p-4 lg:p-6">
+      <div className="animate-fade-in p-4 lg:p-6">
         <div className="text-center py-20 text-muted-foreground">
           <p className="text-lg font-medium">Parâmetro não encontrado</p>
           <Link
@@ -124,7 +126,7 @@ export default function DetalhamentoParametroPage() {
   }
 
   return (
-    <div className="animate-fade-in min-h-screen p-4 lg:p-6 space-y-6">
+    <div className="animate-fade-in p-4 lg:p-6 space-y-6">
       {/* Header: Voltar + Título + Badge */}
       <div className="flex items-center gap-3">
         <Link
@@ -179,7 +181,12 @@ export default function DetalhamentoParametroPage() {
               {eventosPaginados.map((evento) => (
                 <tr
                   key={evento.id}
-                  className="border-b last:border-0 hover:bg-muted/50 transition-colors"
+                  className="border-b last:border-0 hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() =>
+                    router.push(
+                      `/performance-condutores/${encodeURIComponent(evento.condutor)}`
+                    )
+                  }
                 >
                   <td className="py-2 px-2 text-muted-foreground">
                     {evento.data}

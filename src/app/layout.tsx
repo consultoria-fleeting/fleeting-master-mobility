@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Geist } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AppSidebar } from "@/components/app-sidebar";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
@@ -25,9 +26,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" suppressHydrationWarning className={cn("h-full", "antialiased", inter.variable, "font-sans", geist.variable)}>
-      <body className="min-h-full flex flex-col font-sans">
-        <TooltipProvider delay={200}>{children}</TooltipProvider>
+      <body className="h-full font-sans">
+        <TooltipProvider delay={200}>
+          <AppSidebar>{children}</AppSidebar>
+        </TooltipProvider>
       </body>
     </html>
   );
 }
+

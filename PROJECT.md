@@ -33,6 +33,8 @@ Micro frontend que futuramente absorverá módulos do **Master Mobility** (softw
 | **RegrasCalculoLista** | `src/components/regras-calculo-lista.tsx` | Lista numerada de regras de cálculo do ranking. Suporta destaques (strong) normais e em cor de perigo. |
 | **PeriodicidadeSecao** | `src/components/periodicidade-secao.tsx` | Seção de periodicidade de atualização do ranking. Ícone de relógio e textos com destaques. |
 | **ParametroCard** | `src/components/parametro-card.tsx` | Card de indicador de parâmetro do ranking. Cor de fundo, ícone Lucide, label e total de eventos. Clicável com suporte a teclado. |
+| **ScrollCarousel** | `src/components/scroll-carousel.tsx` | Carrossel horizontal genérico com drag-to-scroll, setas de navegação no hover e fade visual. Reutilizável para qualquer conteúdo com scroll horizontal. |
+| **AppSidebar** | `src/components/app-sidebar.tsx` | Menu lateral de navegação com logo, links com ícones, submenus colapsáveis, estado colapsado/expandido, suporte mobile com overlay e breadcrumb no header. |
 
 ### Componentes de Gráficos Genéricos (`src/components/charts/`)
 
@@ -84,6 +86,7 @@ Componentes de gráfico reutilizáveis baseados em Recharts. Todos são genéric
 | `src/data/mock-matriz-pontuacao.ts` | Dados da Matriz de Pontuação: eventos com pontuação, classificações, regras de cálculo e periodicidade. |
 | `src/data/mock-parametros-ranking.ts` | 19 indicadores do ranking agrupados por nível de impacto + configuração de cores dos grupos. |
 | `src/data/mock-eventos-parametro.ts` | Eventos detalhados por parâmetro. Função `gerarEventosPorParametro()` com datas determinísticas. Interface `EventoDetalhe`. |
+| `src/data/mock-eventos-condutor.ts` | Eventos individuais de um condutor. Função `gerarEventosCondutor()` determinística por nome. Interface `EventoCondutor`. |
 
 ---
 
@@ -91,10 +94,14 @@ Componentes de gráfico reutilizáveis baseados em Recharts. Todos são genéric
 
 | Página | Rota | Propósito |
 |---|---|---|
-| Dashboard Geral do Ranking | `/` | Visão consolidada com filtros, cards de KPI, listas Top 10 e Ranking completo (Mensal/Anual) |
+| Dashboard Geral do Ranking | `/` | Visão consolidada com filtros, cards de KPI, listas Top 10, Ranking completo (Mensal/Anual) e Análises Gráficas (Evolução Anual, Condutores por Unidade/Departamento/Filial, Fadiga por Filial, Eventos por Parâmetro) |
 | Matriz de Pontuação | `/matriz-pontuacao` | Critérios, pesos e regras de cálculo do ranking. Tabela de eventos, classificação, regras e periodicidade |
 | Parâmetros do Ranking | `/dashboard-parametros` | 19 indicadores de eventos agrupados por nível de impacto. Cards clicáveis com navegação para detalhamento |
-| Detalhamento de Parâmetro | `/dashboard-parametros/[id]` | Lista paginada de eventos por parâmetro. Recebe mês/ano via URL params. Header com badge de grupo e botão de voltar |
+| Detalhamento de Parâmetro | `/dashboard-parametros/[id]` | Lista paginada de eventos por parâmetro. Linhas clicáveis navegam para performance do condutor |
+| Performance do Condutor | `/performance-condutores/[id]` | Perfil individual com abas Ranking (info cards, pontuações mensais, eventos) e Análise Preditiva (IRC ativo, demais seções desabilitadas) |
+| Performance dos Condutores | `/performance-condutores` | Lista de todos os condutores com ranking, pontuação e classificação. Filtros reutilizados, paginação e navegação para detalhe individual |
+| Gestão de Exceções | `/gestao-excecoes` | Histórico de exceções ao ranking. Tabela paginada com tipo, condutor, data/hora, justificativa, decisão (badge) e pontuações antes/depois |
+| Análises Preditivas | `/analises-preditivas` | Visão preditiva da frota: IRC gauge, evolução mensal com meta, top 10 condutores IRC, zonas de risco, probabilidade de eventos e heatmap dia×hora |
 | Demo de Gráficos | `/demo-graficos` | Demonstração dos componentes de gráficos genéricos (Sprint Review) |
 
 ---

@@ -179,5 +179,6 @@ export const opcoesFiltro: OpcoesFiltro = {
   departamentos: [...new Set(condutores.map((c) => c.departamento))],
   funcoes: [...new Set(condutores.map((c) => c.funcao))],
   negocios: [...new Set(condutores.map((c) => c.negocio))],
+  centrosCusto: [...new Set(condutores.map((c) => c.centroCusto))],
 };
 

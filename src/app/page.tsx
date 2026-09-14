@@ -17,12 +17,22 @@
 import { useState, useMemo, useCallback } from "react";
 import { Users, Trophy, TrendingDown } from "lucide-react";
 import { condutores, opcoesFiltro } from "@/data/mock-condutores";
+import {
+  evolucaoAnual,
+  condutoresPorUnidade,
+  condutoresPorDepartamento,
+  condutoresPorFilial,
+  fadigaPorFilial,
+  eventosPorParametro,
+} from "@/data/mock-graficos-dashboard";
 import type { FiltrosState } from "@/types/condutor";
 import { StatCard } from "@/components/stat-card";
 import { PeriodoSelector } from "@/components/periodo-selector";
 import { FiltroBarra } from "@/components/filtro-barra";
 import { TopRankingList } from "@/components/top-ranking-list";
 import { RankingCondutores } from "@/components/ranking-condutores";
+import { BarChartVertical, BarChartHorizontal } from "@/components/charts";
+import { InfoTooltip } from "@/components/info-tooltip";
 
 /** Estado inicial dos filtros — nenhum filtro aplicado */
 const FILTROS_INICIAIS: FiltrosState = {
@@ -31,6 +41,7 @@ const FILTROS_INICIAIS: FiltrosState = {
   departamento: "",
   funcao: "",
   negocio: "",
+  centroCusto: "",
 };
 
 export default function DashboardRankingPage() {
@@ -64,6 +75,7 @@ export default function DashboardRankingPage() {
         return false;
       }
       if (filtros.gestor && condutor.gestor !== filtros.gestor) return false;
+      if (filtros.centroCusto && condutor.centroCusto !== filtros.centroCusto) return false;
       if (
         filtros.departamento &&
         condutor.departamento !== filtros.departamento
@@ -110,7 +122,7 @@ export default function DashboardRankingPage() {
   }, [condutoresFiltrados]);
 
   return (
-    <div className="animate-fade-in min-h-screen p-4 lg:p-6 space-y-6">
+    <div className="animate-fade-in p-4 lg:p-6 space-y-6">
       {/* Header com título e seletor de período */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
@@ -195,6 +207,126 @@ export default function DashboardRankingPage() {
 
       {/* Ranking dos Condutores — Tabela completa com abas Mensal/Anual */}
       <RankingCondutores condutores={condutoresFiltrados} />
+
+      {/* ==================== ANÁLISES GRÁFICAS ==================== */}
+      <div>
+        <h2 className="text-lg font-semibold text-foreground mb-4">
+          Análises Gráficas
+        </h2>
+      </div>
+
+      {/* Evolução do Comportamento — Ano */}
+      <div className="bg-card rounded-lg border border-border p-5">
+        <h4 className="text-sm font-semibold mb-4 flex items-center gap-2">
+          Evolução do Comportamento — Ano
+          <InfoTooltip texto="Grau de exposição ao risco por mês: evolução anual da distribuição dos condutores por classificação." />
+        </h4>
+        <BarChartVertical
+          dados={evolucaoAnual}
+          categoriaKey="mes"
+          series={[
+            { dataKey: "referencia", nome: "Referência", cor: "#92D050" },
+            { dataKey: "baixa", nome: "Baixa", cor: "#EEDA2B" },
+            { dataKey: "media", nome: "Média", cor: "#FF0000" },
+            { dataKey: "alta", nome: "Alta", cor: "#9B23AB" },
+          ]}
+          altura={420}
+          scrollHorizontal
+          larguraPorItem={80}
+        />
+      </div>
+
+      {/* Grid 2x2 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Condutores por Unidade x Comportamento */}
+        <div className="bg-card rounded-lg border border-border p-5">
+          <h4 className="text-sm font-semibold mb-4 flex items-center gap-2">
+            Condutores por Unidade x Comportamento
+            <InfoTooltip texto="Distribuição dos condutores por unidade, segmentados pela classificação de risco." />
+          </h4>
+          <BarChartHorizontal
+            dados={condutoresPorUnidade}
+            categoriaKey="negocio"
+            series={[
+              { dataKey: "referencia", nome: "Ref.", cor: "#92D050", stackId: "s" },
+              { dataKey: "baixa", nome: "Baixa", cor: "#EEDA2B", stackId: "s" },
+              { dataKey: "media", nome: "Média", cor: "#FF0000", stackId: "s" },
+              { dataKey: "alta", nome: "Alta", cor: "#9B23AB", stackId: "s" },
+            ]}
+            altura={250}
+          />
+        </div>
+
+        {/* Condutores por Departamento x Comportamento */}
+        <div className="bg-card rounded-lg border border-border p-5">
+          <h4 className="text-sm font-semibold mb-4 flex items-center gap-2">
+            Condutores por Departamento x Comportamento
+            <InfoTooltip texto="Distribuição dos condutores por departamento, segmentados pela classificação de risco." />
+          </h4>
+          <BarChartHorizontal
+            dados={condutoresPorDepartamento}
+            categoriaKey="funcao"
+            series={[
+              { dataKey: "referencia", nome: "Ref.", cor: "#92D050", stackId: "s" },
+              { dataKey: "baixa", nome: "Baixa", cor: "#EEDA2B", stackId: "s" },
+              { dataKey: "media", nome: "Média", cor: "#FF0000", stackId: "s" },
+              { dataKey: "alta", nome: "Alta", cor: "#9B23AB", stackId: "s" },
+            ]}
+            altura={250}
+          />
+        </div>
+
+        {/* Condutores por Filial x Comportamento */}
+        <div className="bg-card rounded-lg border border-border p-5">
+          <h4 className="text-sm font-semibold mb-4 flex items-center gap-2">
+            Condutores por Filial x Comportamento
+            <InfoTooltip texto="Distribuição dos condutores por filial, segmentados pela classificação de risco." />
+          </h4>
+          <BarChartHorizontal
+            dados={condutoresPorFilial}
+            categoriaKey="departamento"
+            series={[
+              { dataKey: "referencia", nome: "Ref.", cor: "#92D050", stackId: "s" },
+              { dataKey: "baixa", nome: "Baixa", cor: "#EEDA2B", stackId: "s" },
+              { dataKey: "media", nome: "Média", cor: "#FF0000", stackId: "s" },
+              { dataKey: "alta", nome: "Alta", cor: "#9B23AB", stackId: "s" },
+            ]}
+            altura={250}
+          />
+        </div>
+
+        {/* Registros de Fadiga por Filial */}
+        <div className="bg-card rounded-lg border border-border p-5">
+          <h4 className="text-sm font-semibold mb-4 flex items-center gap-2">
+            Registros de Fadiga por Filial
+            <InfoTooltip texto="Quantidade de registros de fadiga aguda e acumulada por filial no período selecionado." />
+          </h4>
+          <BarChartVertical
+            dados={fadigaPorFilial}
+            categoriaKey="departamento"
+            series={[
+              { dataKey: "aguda", nome: "Fadiga Aguda", cor: "#FF0000" },
+              { dataKey: "acumulada", nome: "Fadiga Acumulada", cor: "#9B23AB" },
+            ]}
+            altura={250}
+          />
+        </div>
+      </div>
+
+      {/* Quantidade de Eventos por Parâmetro do Ranking */}
+      <div className="bg-card rounded-lg border border-border p-5">
+        <h4 className="text-sm font-semibold mb-4 flex items-center gap-2">
+          Quantidade de Eventos por Parâmetro do Ranking
+          <InfoTooltip texto="Total de eventos registrados para cada parâmetro do ranking no período selecionado." />
+        </h4>
+        <BarChartHorizontal
+          dados={eventosPorParametro}
+          categoriaKey="parametro"
+          series={[{ dataKey: "total", nome: "Total", cor: "hsl(220 72% 49%)" }]}
+          altura={400}
+          larguraLabel={180}
+        />
+      </div>
     </div>
   );
 }

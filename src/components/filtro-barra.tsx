@@ -3,7 +3,7 @@
  *
  * Componente de filtros reutilizável que inclui:
  * - Input de busca por nome do condutor
- * - Selects para gestor, filial, departamento e unidade
+ * - Selects para gestor, centro de custo, filial, departamento e unidade
  *
  * Validação de inputs com Zod para sanitização.
  *
@@ -91,6 +91,21 @@ export function FiltroBarra({
         {opcoes.gestores.map((gestor) => (
           <option key={gestor} value={gestor}>
             {gestor}
+          </option>
+        ))}
+      </select>
+
+      <select
+        id="filtro-centro-custo"
+        value={filtros.centroCusto}
+        onChange={(e) => handleSelectChange("centroCusto", e.target.value)}
+        className="text-xs border border-border rounded-md px-3 py-1.5 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+        aria-label="Filtrar por centro de custo"
+      >
+        <option value="">Todos os Centros de Custo</option>
+        {opcoes.centrosCusto.map((cc) => (
+          <option key={cc} value={cc}>
+            {cc}
           </option>
         ))}
       </select>

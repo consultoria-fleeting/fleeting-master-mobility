@@ -93,8 +93,10 @@
 
 /* ---------- Estilos Globais ---------- */
 
-* {
-  border-color: hsl(var(--border));
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
 }
 
 body {
