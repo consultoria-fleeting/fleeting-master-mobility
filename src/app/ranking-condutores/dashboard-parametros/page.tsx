@@ -3,7 +3,7 @@
  *
  * Exibe os 19 indicadores de eventos agrupados por nível de impacto
  * na pontuação dos condutores.
- * Cada card é clicável e navega para /dashboard-parametros/{id}.
+ * Cada card é clicável e navega para /ranking-condutores/dashboard-parametros/{id}.
  *
  * Seções:
  * - Seletor de período (mês/ano) no header
@@ -14,7 +14,7 @@
  * TODO(backend): Substituir dados mock por chamadas à API.
  * TODO(security): Implementar autenticação/autorização quando integrar com backend.
  *
- * Rota: /dashboard-parametros
+ * Rota: /ranking-condutores/dashboard-parametros
  */
 
 "use client";
@@ -81,7 +81,7 @@ export default function DashboardParametrosPage() {
       mes: mesSelecionado,
       ano: String(anoSelecionado),
     });
-    router.push(`/dashboard-parametros/${parametroId}?${params.toString()}`);
+    router.push(`/ranking-condutores/dashboard-parametros/${parametroId}?${params.toString()}`);
   }
 
   return (

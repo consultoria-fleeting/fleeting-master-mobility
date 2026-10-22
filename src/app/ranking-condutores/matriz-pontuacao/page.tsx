@@ -14,7 +14,7 @@
  * TODO(backend): Substituir dados mock pela configuração ativa do cliente via API.
  * TODO(security): Implementar autenticação/autorização quando integrar com backend.
  *
- * Rota: /matriz-pontuacao
+ * Rota: /ranking-condutores/matriz-pontuacao
  */
 
 import { TabelaPontuacao } from "@/components/tabela-pontuacao";

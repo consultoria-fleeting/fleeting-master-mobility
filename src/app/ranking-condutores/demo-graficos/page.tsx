@@ -5,7 +5,7 @@
  * criados no projeto. Utiliza dados fictícios para demonstrar
  * a flexibilidade e reutilização de cada componente.
  *
- * Rota: /demo-graficos
+ * Rota: /ranking-condutores/demo-graficos
  */
 
 "use client";

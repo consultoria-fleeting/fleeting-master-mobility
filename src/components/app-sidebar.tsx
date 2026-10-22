@@ -62,7 +62,7 @@ const ITENS_NAV: NavItem[] = [
     icon: Home,
   },
   {
-    path: "/",
+    path: "/ranking-condutores",
     label: "Dashboard Ranking",
     icon: BarChart3,
   },
@@ -71,27 +71,27 @@ const ITENS_NAV: NavItem[] = [
     icon: ChevronDown,
     children: [
       {
-        path: "/dashboard-parametros",
+        path: "/ranking-condutores/dashboard-parametros",
         label: "Parâmetros do Ranking",
         icon: Settings2,
       },
       {
-        path: "/gestao-excecoes",
+        path: "/ranking-condutores/gestao-excecoes",
         label: "Gestão de Exceções",
         icon: ShieldAlert,
       },
       {
-        path: "/performance-condutores",
+        path: "/ranking-condutores/performance-condutores",
         label: "Performance dos Condutores",
         icon: Users,
       },
       {
-        path: "/matriz-pontuacao",
+        path: "/ranking-condutores/matriz-pontuacao",
         label: "Matriz de Pontuação",
         icon: Grid3X3,
       },
       {
-        path: "/analises-preditivas",
+        path: "/ranking-condutores/analises-preditivas",
         label: "Análises Preditivas",
         icon: Brain,
       },
@@ -111,7 +111,7 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
 
   /** Verifica se o path está ativo (match exato ou prefixo) */
   function estaAtivo(path: string): boolean {
-    if (path === "/") return pathname === "/";
+    if (path === "/ranking-condutores") return pathname === path;
     return pathname === path || pathname.startsWith(path + "/");
   }
 
@@ -125,9 +125,9 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
       }
     }
     // Páginas dinâmicas
-    if (pathname.startsWith("/performance-condutores"))
+    if (pathname.startsWith("/ranking-condutores/performance-condutores"))
       return "Performance do Condutor";
-    if (pathname.startsWith("/dashboard-parametros"))
+    if (pathname.startsWith("/ranking-condutores/dashboard-parametros"))
       return "Detalhamento de Parâmetro";
     return "Página";
   }

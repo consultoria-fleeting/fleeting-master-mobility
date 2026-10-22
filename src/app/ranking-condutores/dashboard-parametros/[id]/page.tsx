@@ -8,7 +8,7 @@
  * - Tabela com: Data, Condutor, Gestor, Filial, Departamento, Unidade, Classificação
  * - Paginação
  *
- * Rota: /dashboard-parametros/[id]?mes=...&ano=...
+ * Rota: /ranking-condutores/dashboard-parametros/[id]?mes=...&ano=...
  *
  * TODO(backend): Substituir dados mock por chamadas à API filtradas por parâmetro e período.
  * TODO(security): Implementar autenticação/autorização quando integrar com backend.
@@ -90,7 +90,7 @@ export default function DetalhamentoParametroPage() {
         <div className="text-center py-20 text-muted-foreground">
           <p className="text-lg font-medium">Parâmetro não encontrado</p>
           <Link
-            href="/dashboard-parametros"
+            href="/ranking-condutores/dashboard-parametros"
             className="text-sm text-primary hover:underline mt-2 inline-block"
           >
             ← Voltar para Parâmetros do Ranking
@@ -130,7 +130,7 @@ export default function DetalhamentoParametroPage() {
       {/* Header: Voltar + Título + Badge */}
       <div className="flex items-center gap-3">
         <Link
-          href="/dashboard-parametros"
+          href="/ranking-condutores/dashboard-parametros"
           className="p-2 rounded-md hover:bg-muted transition-colors"
           aria-label="Voltar para Parâmetros do Ranking"
         >
@@ -184,7 +184,7 @@ export default function DetalhamentoParametroPage() {
                   className="border-b last:border-0 hover:bg-muted/50 transition-colors cursor-pointer"
                   onClick={() =>
                     router.push(
-                      `/performance-condutores/${encodeURIComponent(evento.condutor)}`
+                      `/ranking-condutores/performance-condutores/${encodeURIComponent(evento.condutor)}`
                     )
                   }
                 >

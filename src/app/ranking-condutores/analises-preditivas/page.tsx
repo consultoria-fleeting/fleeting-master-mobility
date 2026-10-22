@@ -13,7 +13,7 @@
  * TODO(backend): Substituir dados mock por chamadas à API.
  * TODO(security): Implementar autenticação/autorização quando integrar com backend.
  *
- * Rota: /analises-preditivas
+ * Rota: /ranking-condutores/analises-preditivas
  */
 
 "use client";
@@ -195,7 +195,7 @@ export default function AnalisesPreditivasPage() {
           <p className="text-sm text-muted-foreground">Visão geral da frota</p>
         </div>
         <Link
-          href="/performance-condutores"
+          href="/ranking-condutores/performance-condutores"
           className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors"
         >
           Ver performance dos condutores <ArrowRight className="w-4 h-4" />
@@ -283,7 +283,7 @@ export default function AnalisesPreditivasPage() {
                   {nivelIrc(c.irc)}
                 </span>
                 <Link
-                  href={`/performance-condutores/${encodeURIComponent(c.nome)}`}
+                  href={`/ranking-condutores/performance-condutores/${encodeURIComponent(c.nome)}`}
                   className="text-[11px] text-primary hover:underline"
                 >
                   Ver condutor

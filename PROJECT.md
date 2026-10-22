@@ -94,15 +94,15 @@ Componentes de gráfico reutilizáveis baseados em Recharts. Todos são genéric
 
 | Página | Rota | Propósito |
 |---|---|---|
-| Dashboard Geral do Ranking | `/` | Visão consolidada com filtros, cards de KPI, listas Top 10, Ranking completo (Mensal/Anual) e Análises Gráficas (Evolução Anual, Condutores por Unidade/Departamento/Filial, Fadiga por Filial, Eventos por Parâmetro) |
-| Matriz de Pontuação | `/matriz-pontuacao` | Critérios, pesos e regras de cálculo do ranking. Tabela de eventos, classificação, regras e periodicidade |
-| Parâmetros do Ranking | `/dashboard-parametros` | 19 indicadores de eventos agrupados por nível de impacto. Cards clicáveis com navegação para detalhamento |
-| Detalhamento de Parâmetro | `/dashboard-parametros/[id]` | Lista paginada de eventos por parâmetro. Linhas clicáveis navegam para performance do condutor |
-| Performance do Condutor | `/performance-condutores/[id]` | Perfil individual com abas Ranking (info cards, pontuações mensais, eventos) e Análise Preditiva (IRC ativo, demais seções desabilitadas) |
-| Performance dos Condutores | `/performance-condutores` | Lista de todos os condutores com ranking, pontuação e classificação. Filtros reutilizados, paginação e navegação para detalhe individual |
-| Gestão de Exceções | `/gestao-excecoes` | Histórico de exceções ao ranking. Tabela paginada com tipo, condutor, data/hora, justificativa, decisão (badge) e pontuações antes/depois |
-| Análises Preditivas | `/analises-preditivas` | Visão preditiva da frota: IRC gauge, evolução mensal com meta, top 10 condutores IRC, zonas de risco, probabilidade de eventos e heatmap dia×hora |
-| Demo de Gráficos | `/demo-graficos` | Demonstração dos componentes de gráficos genéricos (Sprint Review) |
+| Dashboard Geral do Ranking | `/ranking-condutores` | Visão consolidada com filtros, cards de KPI, listas Top 10, Ranking completo (Mensal/Anual) e Análises Gráficas (Evolução Anual, Condutores por Unidade/Departamento/Filial, Fadiga por Filial, Eventos por Parâmetro) |
+| Matriz de Pontuação | `/ranking-condutores/matriz-pontuacao` | Critérios, pesos e regras de cálculo do ranking. Tabela de eventos, classificação, regras e periodicidade |
+| Parâmetros do Ranking | `/ranking-condutores/dashboard-parametros` | 19 indicadores de eventos agrupados por nível de impacto. Cards clicáveis com navegação para detalhamento |
+| Detalhamento de Parâmetro | `/ranking-condutores/dashboard-parametros/[id]` | Lista paginada de eventos por parâmetro. Linhas clicáveis navegam para performance do condutor |
+| Performance do Condutor | `/ranking-condutores/performance-condutores/[id]` | Perfil individual com abas Ranking (info cards, pontuações mensais, eventos) e Análise Preditiva (IRC ativo, demais seções desabilitadas) |
+| Performance dos Condutores | `/ranking-condutores/performance-condutores` | Lista de todos os condutores com ranking, pontuação e classificação. Filtros reutilizados, paginação e navegação para detalhe individual |
+| Gestão de Exceções | `/ranking-condutores/gestao-excecoes` | Histórico de exceções ao ranking. Tabela paginada com tipo, condutor, data/hora, justificativa, decisão (badge) e pontuações antes/depois |
+| Análises Preditivas | `/ranking-condutores/analises-preditivas` | Visão preditiva da frota: IRC gauge, evolução mensal com meta, top 10 condutores IRC, zonas de risco, probabilidade de eventos e heatmap dia×hora |
+| Demo de Gráficos | `/ranking-condutores/demo-graficos` | Demonstração dos componentes de gráficos genéricos (Sprint Review) |
 
 ---
 
@@ -127,3 +127,11 @@ Componentes de gráfico reutilizáveis baseados em Recharts. Todos são genéric
 9. **Paginação inteligente**: Quando há muitas páginas, exibe reticências (…) para não poluir a UI, inspirado no padrão do Google.
 
 10. **Pontuações mensais determinísticas**: Variações fixas são aplicadas à pontuação base de cada condutor para gerar dados mensais sem usar `Math.random()`, evitando hydration mismatch.
+
+9. **Multi-Zone com o legado (`front-master-mobility`)**: Este projeto roda sob o mesmo domínio via Rewrite da Vercel. Todas as páginas ficam em `src/app/ranking-condutores/` para casar com a URL `/ranking-condutores`. O `assetPrefix: "/fleeting-static"` (em `next.config.ts`) evita conflito de chunks `/_next/static` com o legado.
+
+10. **Autenticação compartilhada com o legado**: Cookies e `localStorage` já são compartilhados no navegador. Arquivos:
+    - `src/utils/tokens.ts` — `getTokens`, `setTokens`, `resetTokens` (cookies via `js-cookie`).
+    - `src/utils/auth.ts` — `redirectToLogin` (hard navigation, pois `/login` é do legado) e `getCurrentUser`.
+    - `src/services/api.ts` — instância Axios com token no header e refresh automático em 401 (Promise Lock para evitar refresh simultâneo; falha => `resetTokens` + `redirectToLogin`). Resposta do refresh validada com Zod.
+    - Variáveis de ambiente documentadas em `.env.example`.

@@ -5,7 +5,7 @@
  * - Ranking: cards de informação, pontuações mensais e tabela de eventos
  * - Análise Preditiva: Índice de Risco Composto (IRC) — demais seções desabilitadas (V1)
  *
- * Rota: /performance-condutores/[id]
+ * Rota: /ranking-condutores/performance-condutores/[id]
  * O [id] é o nome do condutor (URL-encoded).
  *
  * TODO(backend): Substituir dados mock por chamadas à API.
@@ -85,7 +85,7 @@ export default function PerformanceCondutorPage() {
         <div className="text-center py-20 text-muted-foreground">
           <p className="text-lg font-medium">Condutor não encontrado</p>
           <Link
-            href="/"
+            href="/ranking-condutores"
             className="text-sm text-primary hover:underline mt-2 inline-block"
           >
             ← Voltar para o Dashboard

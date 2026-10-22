@@ -4,7 +4,7 @@
  * Lista todos os condutores da frota com ranking, pontuação
  * e classificação. Permite filtros e navegação para detalhe individual.
  *
- * Rota: /performance-condutores
+ * Rota: /ranking-condutores/performance-condutores
  *
  * TODO(backend): Substituir dados mock por chamadas à API.
  * TODO(security): Implementar autenticação/autorização quando integrar.
@@ -179,7 +179,7 @@ export default function PerformanceCondutoresPage() {
                   className="border-b last:border-0 hover:bg-muted/50 cursor-pointer transition-colors"
                   onClick={() =>
                     router.push(
-                      `/performance-condutores/${encodeURIComponent(c.nome)}`
+                      `/ranking-condutores/performance-condutores/${encodeURIComponent(c.nome)}`
                     )
                   }
                 >

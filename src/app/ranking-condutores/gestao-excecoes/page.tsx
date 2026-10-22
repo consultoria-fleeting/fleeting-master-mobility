@@ -5,7 +5,7 @@
  * Cada exceção mostra tipo de evento, condutor, data/hora,
  * justificativa, decisão e pontuações antes/depois.
  *
- * Rota: /gestao-excecoes
+ * Rota: /ranking-condutores/gestao-excecoes
  *
  * TODO(backend): Substituir dados mock por chamadas à API.
  * TODO(security): Implementar autenticação/autorização quando integrar.
@@ -76,7 +76,7 @@ export default function GestaoExcecoesPage() {
                   className="border-b last:border-0 hover:bg-muted/50 cursor-pointer transition-colors"
                   onClick={() =>
                     router.push(
-                      `/performance-condutores/${encodeURIComponent(e.condutor)}`
+                      `/ranking-condutores/performance-condutores/${encodeURIComponent(e.condutor)}`
                     )
                   }
                 >
