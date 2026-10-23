@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Geist } from "next/font/google";
+import { Inter, Geist, Poppins } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppSidebar } from "@/components/app-sidebar";
 import "./globals.css";
@@ -10,6 +10,14 @@ const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
+  display: "swap",
+});
+
+/** Fonte da nova identidade Índigo (Painel de Gestão). Aplicada via classe `.font-poppins`. */
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-poppins",
   display: "swap",
 });
 
@@ -25,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning className={cn("h-full", "antialiased", inter.variable, "font-sans", geist.variable)}>
+    <html lang="pt-BR" suppressHydrationWarning className={cn("h-full", "antialiased", inter.variable, "font-sans", geist.variable, poppins.variable)}>
       <body className="h-full font-sans">
         <TooltipProvider delay={200}>
           <AppSidebar>{children}</AppSidebar>

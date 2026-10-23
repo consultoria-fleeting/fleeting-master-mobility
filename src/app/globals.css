@@ -60,6 +60,21 @@
   --sidebar-border: 218 70% 28%;
   --sidebar-ring: 220 72% 49%;
   --sidebar-muted: 218 60% 35%;
+  /* Divisor do header/footer da sidebar (antes fixo em #1a3a5c) */
+  --sidebar-divider: 211 56% 23%;
+}
+
+/*
+ * Tema Índigo (nova identidade) — aplicado à sidebar somente nas rotas do
+ * Painel de Gestão. Para torná-lo global, basta mover estes valores para :root.
+ */
+.tema-indigo {
+  --sidebar-background: 244 47% 20%; /* #1E1B4B */
+  --sidebar-foreground: 226 100% 94%; /* #E0E7FF */
+  --sidebar-primary: 234 89% 74%; /* #818CF8 */
+  --sidebar-accent: 243 75% 59%; /* #4F46E5 */
+  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-divider: 243 47% 34%; /* #312E81 */
 }
 
 /* ---------- Tailwind v4 Theme Tokens ---------- */
@@ -132,4 +147,35 @@ h6 {
 
 .animate-fade-in {
   animation: fade-in 0.3s ease-out;
+}
+
+/* Fonte da identidade Índigo (variável carregada em src/app/layout.tsx) */
+.font-poppins {
+  font-family: var(--font-poppins), "Poppins", system-ui, -apple-system, sans-serif;
+}
+
+/* Barras do gráfico "KMs Rodados" crescendo a partir da base */
+@keyframes barra-crescer {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+/* Brilho percorrendo o texto "Analisando dados da frota..." */
+@keyframes brilho-texto {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in {
+    animation: none;
+  }
 }

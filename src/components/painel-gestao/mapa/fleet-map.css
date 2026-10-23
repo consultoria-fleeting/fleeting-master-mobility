@@ -1,0 +1,370 @@
+/*
+ * Estilos do Mapa de Frota (Leaflet).
+ * Prefixo `fm-` (fleet map) para não colidir com outras telas.
+ * Spec: MAPA_REFERENCIA_VISUAL.md, seções 6 e 7 — adaptado à identidade Índigo.
+ */
+
+/* ---------- Container ---------- */
+
+.fm-mapa .leaflet-container {
+  font-family: inherit;
+  background: #eef0f7;
+  outline: none;
+}
+
+.fm-mapa .leaflet-control-attribution {
+  font-size: 9px;
+  background: rgba(255, 255, 255, 0.75);
+  border-top-left-radius: 6px;
+  color: #64748b;
+}
+
+.fm-mapa .leaflet-control-attribution a {
+  color: #4f46e5;
+}
+
+/* ---------- Temas dos tiles ---------- */
+
+.fm-tiles-claro {
+  filter: grayscale(0.92) brightness(1.06) contrast(0.92);
+}
+
+.leaflet-dark-tiles {
+  filter: brightness(0.68) invert(100%) hue-rotate(180deg) contrast(1.25) saturate(0.85) !important;
+}
+
+/* No modo Macro os tiles ficam esmaecidos para destacar o coroplético */
+.fm-mapa .leaflet-tile-pane {
+  transition: opacity 0.4s ease;
+}
+
+.fm-modo-macro .leaflet-tile-pane {
+  opacity: 0.45;
+}
+
+/* No modo Micro os polígonos dos estados não interceptam cliques */
+.fm-modo-micro .fm-uf-poligono {
+  pointer-events: none;
+}
+
+.fm-uf-poligono {
+  transition: fill-opacity 0.35s ease, stroke-opacity 0.35s ease;
+}
+
+/* ---------- Reset do divIcon ---------- */
+
+.fm-icone {
+  background: transparent;
+  border: none;
+}
+
+/* ---------- Bolha de estado (Macro) ---------- */
+
+.fm-estado {
+  position: relative;
+  width: 54px;
+  height: 54px;
+  cursor: pointer;
+}
+
+.fm-estado-pulso {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: rgba(79, 70, 229, 0.28);
+  animation: fm-pulso 2.4s ease-out infinite;
+}
+
+.fm-estado-bolha {
+  position: absolute;
+  inset: 7px;
+  border-radius: 999px;
+  background: #fff;
+  border: 2px solid #4f46e5;
+  box-shadow: 0 6px 16px -6px rgba(30, 27, 75, 0.55);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.fm-estado:hover .fm-estado-bolha {
+  transform: scale(1.08);
+}
+
+.fm-estado-uf {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #818cf8;
+}
+
+.fm-estado-total {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e1b4b;
+  margin-top: 1px;
+}
+
+@keyframes fm-pulso {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+/* ---------- Cluster (Micro) ---------- */
+
+.fm-cluster {
+  position: relative;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 6px 16px -6px rgba(30, 27, 75, 0.5);
+  transition: transform 0.2s ease;
+  animation: fm-surgir 0.25s ease-out;
+}
+
+.fm-cluster::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 999px;
+  background: #fff;
+}
+
+.fm-cluster:hover {
+  transform: scale(1.1);
+}
+
+.fm-cluster-total {
+  position: relative;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e1b4b;
+}
+
+/* ---------- Pino de veículo (Micro) ---------- */
+
+.fm-pin {
+  --fm-cor: #4f46e5;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  animation: fm-surgir 0.25s ease-out;
+}
+
+.fm-status-in_transit { --fm-cor: #10b981; }
+.fm-status-parked { --fm-cor: #3b82f6; }
+.fm-status-depot { --fm-cor: #8b5cf6; }
+.fm-status-maintenance { --fm-cor: #f59e0b; }
+
+.fm-pin-corpo {
+  position: absolute;
+  inset: 3px;
+  border-radius: 999px;
+  background: #fff;
+  border: 3px solid var(--fm-cor);
+  box-shadow: 0 4px 12px -4px rgba(15, 23, 42, 0.55);
+  transition: transform 0.3s ease;
+}
+
+/* Seta de direção (heading): triângulo no topo, gira junto com o corpo */
+.fm-pin-seta {
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 7px solid var(--fm-cor);
+}
+
+.fm-pin-ponto {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 999px;
+  background: var(--fm-cor);
+}
+
+.fm-pin-grande .fm-pin-ponto {
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+}
+
+.fm-pin:hover .fm-pin-corpo {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--fm-cor) 25%, transparent),
+    0 4px 12px -4px rgba(15, 23, 42, 0.55);
+}
+
+.fm-pin-selecionado .fm-pin-corpo {
+  box-shadow: 0 0 0 5px rgba(79, 70, 229, 0.35), 0 4px 14px -4px rgba(15, 23, 42, 0.6);
+  border-color: #4f46e5;
+}
+
+/* Badge de alerta ativo */
+.fm-pin-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 15px;
+  height: 15px;
+  border-radius: 999px;
+  border: 2px solid #fff;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 11px;
+  text-align: center;
+  color: #fff;
+}
+
+.fm-pin-alerta-critico .fm-pin-badge {
+  background: #e11d48;
+  animation: fm-piscar 1.4s ease-in-out infinite;
+}
+
+.fm-pin-alerta-atencao .fm-pin-badge {
+  background: #d97706;
+}
+
+/* Pílula com a placa (zoom >= 15) */
+.fm-pin-placa {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: #1e1b4b;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  box-shadow: 0 4px 10px -4px rgba(30, 27, 75, 0.6);
+}
+
+@keyframes fm-surgir {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fm-piscar {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.25); }
+}
+
+/* ---------- Tooltips ---------- */
+
+.leaflet-tooltip.fm-tooltip {
+  background: #1e1b4b;
+  color: #e0e7ff;
+  border: 1px solid #312e81;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1.4;
+  box-shadow: 0 12px 28px -12px rgba(30, 27, 75, 0.7);
+  max-width: 240px;
+  white-space: normal;
+}
+
+.leaflet-tooltip-top.fm-tooltip::before {
+  border-top-color: #1e1b4b;
+}
+
+.leaflet-tooltip-bottom.fm-tooltip::before {
+  border-bottom-color: #1e1b4b;
+}
+
+.fm-tooltip-titulo {
+  font-weight: 600;
+  color: #fff;
+  font-size: 12px;
+}
+
+.fm-tooltip-linha {
+  color: #c7d2fe;
+}
+
+.fm-tooltip-dica {
+  margin-top: 4px;
+  color: #818cf8;
+  font-size: 10px;
+}
+
+.fm-tooltip-veiculo {
+  min-width: 190px;
+}
+
+.fm-tooltip-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+
+.fm-tooltip-placa {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: #fff;
+  color: #1e1b4b;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 10px;
+}
+
+.fm-tooltip-velocidade {
+  font-weight: 700;
+}
+
+.fm-tooltip-alerta {
+  margin-top: 5px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 10px;
+}
+
+.fm-tooltip-alerta-critico {
+  background: rgba(225, 29, 72, 0.22);
+  color: #fecdd3;
+}
+
+.fm-tooltip-alerta-atencao {
+  background: rgba(217, 119, 6, 0.25);
+  color: #fde68a;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fm-estado-pulso,
+  .fm-pin-alerta-critico .fm-pin-badge,
+  .fm-pin,
+  .fm-cluster {
+    animation: none;
+  }
+}

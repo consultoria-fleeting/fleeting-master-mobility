@@ -21,6 +21,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
+  LayoutGrid,
   BarChart3,
   Settings2,
   Grid3X3,
@@ -62,8 +63,13 @@ const ITENS_NAV: NavItem[] = [
     icon: Home,
   },
   {
+    path: "/painel-de-gestao",
+    label: "Painel de Gestão",
+    icon: LayoutGrid,
+  },
+  {
     path: "/ranking-condutores",
-    label: "Dashboard Ranking",
+    label: "Ranking de Condutores",
     icon: BarChart3,
   },
   {
@@ -132,8 +138,17 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
     return "Página";
   }
 
+  /** Rotas do Painel de Gestão usam a nova identidade Índigo */
+  const ehPainelGestao = pathname.startsWith("/painel-de-gestao");
+  const secaoAtual = ehPainelGestao ? "Gestão de Frotas" : "Ranking de Condutores";
+  const labelAtual = getLabelAtual();
+  // Evita breadcrumb repetido (ex.: "Ranking de Condutores / Ranking de Condutores")
+  const labelBreadcrumb = labelAtual === secaoAtual ? "Dashboard" : labelAtual;
+
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div
+      className={`flex h-screen overflow-hidden ${ehPainelGestao ? "tema-indigo" : ""}`}
+    >
       {/* Overlay mobile */}
       {mobileAberto && (
         <div
@@ -155,7 +170,7 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
       >
         {/* Header do sidebar */}
         <div
-          className={`flex items-center h-16 px-4 border-b border-[#1a3a5c] ${colapsado ? "justify-center" : "justify-between"
+          className={`flex items-center h-16 px-4 border-b border-[hsl(var(--sidebar-divider))] ${colapsado ? "justify-center" : "justify-between"
             }`}
         >
           {!colapsado && (
@@ -166,7 +181,7 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
                   Master Mobility
                 </h1>
                 <p className="text-[10px] opacity-60">
-                  Ranking de Condutores
+                  Gestão de Frotas
                 </p>
               </div>
             </div>
@@ -298,7 +313,7 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
 
         {/* Footer: Usuário */}
         {!colapsado && (
-          <div className="p-4 border-t border-[#1a3a5c]">
+          <div className="p-4 border-t border-[hsl(var(--sidebar-divider))]">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-[hsl(var(--sidebar-accent))] flex items-center justify-center text-xs font-bold">
                 GF
@@ -324,10 +339,10 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>Ranking de Condutores</span>
+            <span>{secaoAtual}</span>
             <span>/</span>
             <span className="text-foreground font-medium">
-              {getLabelAtual()}
+              {labelBreadcrumb}
             </span>
           </div>
         </header>

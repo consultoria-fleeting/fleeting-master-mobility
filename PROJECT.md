@@ -4,12 +4,13 @@ Micro frontend que futuramente absorverá módulos do **Master Mobility** (softw
 
 ## Stack Tecnológica
 
-- **Framework**: Next.js 15 (App Router)
+- **Framework**: Next.js 16 (App Router) + React 19
 - **Linguagem**: TypeScript
 - **Estilização**: Tailwind CSS v4
 - **Componentes UI**: shadcn/ui
 - **Ícones**: Lucide React
 - **Validação**: Zod
+- **Mapas**: Leaflet 1.9 (uso imperativo, sem react-leaflet)
 - **HTTP Client**: Axios (instalado, pronto para integrações futuras)
 
 ---
@@ -25,7 +26,7 @@ Micro frontend que futuramente absorverá módulos do **Master Mobility** (softw
 | **TopRankingList** | `src/components/top-ranking-list.tsx` | Lista Top 10 genérica. Configurável para exibir ou ocultar coluna de classificação. Usada tanto para Top 10 Referência quanto Top 10 Críticos. |
 | **FiltroBarra** | `src/components/filtro-barra.tsx` | Barra de filtros com input de busca por nome e selects para gestor, filial, departamento e unidade. Validação com Zod. |
 | **PeriodoSelector** | `src/components/periodo-selector.tsx` | Seletor de período (mês e ano). Fica separado da barra de filtros, na parte superior da página. |
-| **InfoTooltip** | `src/components/info-tooltip.tsx` | Ícone "i" com tooltip explicativo. Usa Tooltip do shadcn/ui. |
+| **InfoTooltip** | `src/components/info-tooltip.tsx` | Ícone "i" com tooltip explicativo. Usa Tooltip do shadcn/ui. Props opcionais `iconeClassName` e `conteudoClassName` para customizar o visual (usadas no Painel de Gestão). |
 | **RankingCondutores** | `src/components/ranking-condutores.tsx` | Tabela completa de ranking com abas Mensal/Anual, paginação inteligente e scroll lateral na aba anual. Responde a filtros externos. |
 | **ScoreCircle** | `src/components/score-circle.tsx` | Indicador circular de pontuação mensal, colorido conforme classificação de risco. Usado na aba anual do ranking. |
 | **TabelaPontuacao** | `src/components/tabela-pontuacao.tsx` | Tabela de Pontuação por Evento da Matriz. Exibe Origem (badge colorido), Evento e Pontuação. Destaque em vermelho para -100 pts. |
@@ -34,7 +35,43 @@ Micro frontend que futuramente absorverá módulos do **Master Mobility** (softw
 | **PeriodicidadeSecao** | `src/components/periodicidade-secao.tsx` | Seção de periodicidade de atualização do ranking. Ícone de relógio e textos com destaques. |
 | **ParametroCard** | `src/components/parametro-card.tsx` | Card de indicador de parâmetro do ranking. Cor de fundo, ícone Lucide, label e total de eventos. Clicável com suporte a teclado. |
 | **ScrollCarousel** | `src/components/scroll-carousel.tsx` | Carrossel horizontal genérico com drag-to-scroll, setas de navegação no hover e fade visual. Reutilizável para qualquer conteúdo com scroll horizontal. |
-| **AppSidebar** | `src/components/app-sidebar.tsx` | Menu lateral de navegação com logo, links com ícones, submenus colapsáveis, estado colapsado/expandido, suporte mobile com overlay e breadcrumb no header. |
+| **AppSidebar** | `src/components/app-sidebar.tsx` | Menu lateral de navegação com logo, links com ícones, submenus colapsáveis, estado colapsado/expandido, suporte mobile com overlay e breadcrumb dinâmico no header (seção "Gestão de Frotas" ou "Ranking de Condutores"). Aplica o tema Índigo nas rotas `/painel-de-gestao`. |
+
+### Componentes do Painel de Gestão (`src/components/painel-gestao/`)
+
+Painéis e blocos da tela `/painel-de-gestao` (identidade Índigo, fonte Poppins). Todos recebem os dados via props, então basta trocar os mocks pela API.
+
+- **PainelCard** (`painel-card.tsx`) — Card base do painel (título, contador opcional, ação "Ver Todos"). Reutilizado por tabelas, atividade, KM e manutenção.
+- **StatusBadge** (`status-badge.tsx`) — Badge de status em caixa alta (CRÍTICO, ATENÇÃO, CNH VENCIDA…) com variantes de cor.
+- **PlacaMercosul** (`placa-mercosul.tsx`) — Placa estilizada no padrão Mercosul (faixa azul + BR). Usada no drawer e na lista de veículos.
+- **FiltroSelect** (`filtro-select.tsx`) — Select compacto do cabeçalho; valida o valor escolhido com Zod contra as opções.
+- **DashboardHeader** (`dashboard-header.tsx`) — Título "Painel de Gestão", período, selo "Dados simulados", filtros (Mês, Ano, Grupo, Locadora) e botões Cadastrar / Abrir O.S. Exporta `FiltrosPainel` e `rotuloPeriodo`.
+- **KpiCards** (`kpi-cards.tsx`) — Linha com os 5 KPIs (Veículos, Condutores, TCO, Custo/km, Abastecimento) com tooltip, badge de variação e drawer (Sheet) de detalhamento ao clicar.
+- **VeiculosAtencaoTabela / CondutoresAtencaoTabela** (`attention-tables.tsx`) — Tabelas "que exigem atenção". Clicar numa linha foca o veículo no mapa.
+- **RecentActivity** (`recent-activity.tsx`) — Linha do tempo de atividades recentes com marcador colorido por tipo.
+- **TcoSummary** (`tco-summary.tsx`) — Card escuro "Resumo do TCO" com barra empilhada e breakdown de custos. Usa container query para se adaptar a colunas estreitas.
+- **KmChart** (`km-chart.tsx`) — Barras mensais de KM rodados em CSS puro (sem Recharts), com destaque dourado no mês de pico.
+- **MaintenanceSummary** (`maintenance-summary.tsx`) — Grade 2×2 de manutenção (Rev. vencidas, a vencer, em oficina, sinistros).
+- **AiFleetAssistant** (`ai-fleet-assistant.tsx`) — Barra de pergunta à IA com chips de sugestões, estado "Analisando dados da frota...", resposta com efeito de digitação, mini-cards de métricas e botões "Focar … no mapa". Pergunta validada com Zod.
+- **ai-respostas.ts** — Perguntas sugeridas, etapas da análise e `gerarRespostaIA()` (respostas demonstrativas por intenção ou por placa citada).
+- **FleetMap** (`fleet-map.tsx`) — Mapa Leaflet da frota (Client Component). Modo Macro (zoom < 6: bolhas por UF sobre o GeoJSON das UFs) e Micro (clusters em grade até o zoom 14 e pinos com placa a partir do 15). Carrega veículos por viewport, tem filtros, legenda, lista lateral, troca de tiles, modo expandido (Esc fecha) e recebe `comandoFoco` para centralizar um veículo.
+- **FleetMapSkeleton** (`fleet-map-skeleton.tsx`) — Skeleton do mapa exibido enquanto o chunk do Leaflet carrega (`next/dynamic`).
+- **mapa/MapControls** (`mapa/map-controls.tsx`) — Botões flutuantes: visão Brasil, zoom +/− e troca de tiles (claro/padrão/escuro).
+- **mapa/MapFilterBar** (`mapa/map-filter-bar.tsx`) — Busca (placa, condutor, modelo) e chips de status com contagem. Busca validada com Zod.
+- **mapa/MapLegend** (`mapa/map-legend.tsx`) — Legenda de status (Micro) ou escala de regiões (Macro).
+- **mapa/FleetListSidebar** (`mapa/fleet-list-sidebar.tsx`) — Lista lateral de veículos visíveis no modo expandido (mesma fonte de dados do mapa).
+- **mapa/VehicleDrawer** (`mapa/vehicle-drawer.tsx`) — Drawer (Sheet) com detalhes do veículo: placa, condutor (telefone mascarado), telemetria, filial, grupo e alerta.
+- **mapa/marcadores.ts** — Fábrica dos `divIcon` (bolhas de UF, clusters e pinos). Monta o DOM com `createElement`/`textContent` (sem `innerHTML`).
+- **mapa/cluster.ts** — Agrupamento em grade (pixels) conforme o zoom.
+- **mapa/config.ts** — Tiles, limites do Brasil, níveis de zoom e cores/rótulos por status, categoria e região.
+- **mapa/dados-frota.ts** — Frota mock (52 veículos) e funções no formato da futura API: `fetchMacro`, `fetchVehiclesByMultipleStates`, `fetchVehicleByPlate`, `obterVeiculoPorPlaca`, `obterResumoFrota`.
+- **mapa/estados-brasil.ts** — 27 UFs com centroide e região.
+- **mapa/brasil-ufs.geo.json** — Divisas das UFs (malha do IBGE simplificada), carregadas sob demanda.
+- **mapa/fleet-map.css** — Estilos dos marcadores, popups e controles do Leaflet (prefixo `fm-`).
+
+### Hooks
+
+- **useEfeitoDigitacao** (`src/hooks/use-efeito-digitacao.ts`) — Revela um texto aos poucos (efeito máquina de escrever). Respeita `prefers-reduced-motion`.
 
 ### Componentes de Gráficos Genéricos (`src/components/charts/`)
 
@@ -56,6 +93,8 @@ Componentes de gráfico reutilizáveis baseados em Recharts. Todos são genéric
 | Tooltip | `src/components/ui/tooltip.tsx` |
 | Tabs | `src/components/ui/tabs.tsx` |
 | Button | `src/components/ui/button.tsx` |
+| Sheet (drawer lateral) | `src/components/ui/sheet.tsx` |
+| Skeleton | `src/components/ui/skeleton.tsx` |
 
 ---
 
@@ -75,6 +114,8 @@ Componentes de gráfico reutilizáveis baseados em Recharts. Todos são genéric
 | `GrupoImpacto` | `src/types/parametro-ranking.ts` | Union type para grupos de impacto (alta, media, baixa) |
 | `ParametroRanking` | `src/types/parametro-ranking.ts` | Parâmetro/indicador do ranking (id, label, total, icone, grupo) |
 | `GrupoImpactoConfig` | `src/types/parametro-ranking.ts` | Configuração visual de um grupo de impacto (cor, label) |
+| `KpiGestao`, `VeiculoAtencao`, `CondutorAtencao`, `AtividadeRecente`, `ItemTco`, `ItemManutencao`, `BarraKm` | `src/types/painel-gestao.ts` | Tipos dos blocos do Painel de Gestão |
+| `StatusVeiculo`, `CategoriaVeiculo`, `EstadoBrasil`, `VeiculoFrota`, `ItemCluster`, `FiltrosMapa`, `ComandoFocoMapa` | `src/types/frota-mapa.ts` | Contratos do mapa da frota (macro por UF, micro por veículo, filtros e comando de foco) |
 
 ---
 
@@ -87,6 +128,8 @@ Componentes de gráfico reutilizáveis baseados em Recharts. Todos são genéric
 | `src/data/mock-parametros-ranking.ts` | 19 indicadores do ranking agrupados por nível de impacto + configuração de cores dos grupos. |
 | `src/data/mock-eventos-parametro.ts` | Eventos detalhados por parâmetro. Função `gerarEventosPorParametro()` com datas determinísticas. Interface `EventoDetalhe`. |
 | `src/data/mock-eventos-condutor.ts` | Eventos individuais de um condutor. Função `gerarEventosCondutor()` determinística por nome. Interface `EventoCondutor`. |
+| `src/components/painel-gestao/mock-data.ts` | Dados do Painel de Gestão (KPIs, tabelas de atenção, atividades, TCO, KM, manutenção, opções dos filtros e paleta Índigo). Fonte: `PAINEL_GESTAO_REF.md`. |
+| `src/components/painel-gestao/mapa/dados-frota.ts` | Frota simulada de 52 veículos (placas Mercosul, grupos Comgás/Vivo/Coprel), gerada de forma determinística. |
 
 ---
 
@@ -94,6 +137,7 @@ Componentes de gráfico reutilizáveis baseados em Recharts. Todos são genéric
 
 | Página | Rota | Propósito |
 |---|---|---|
+| Painel de Gestão (protótipo) | `/painel-de-gestao` | Visão consolidada da frota: filtros, assistente de IA, 5 KPIs, veículos/condutores que exigem atenção, mapa Leaflet (Macro/Micro), atividade recente, resumo do TCO, KMs rodados e manutenção. Dados 100% mockados e sem exigência de token. |
 | Dashboard Geral do Ranking | `/ranking-condutores` | Visão consolidada com filtros, cards de KPI, listas Top 10, Ranking completo (Mensal/Anual) e Análises Gráficas (Evolução Anual, Condutores por Unidade/Departamento/Filial, Fadiga por Filial, Eventos por Parâmetro) |
 | Matriz de Pontuação | `/ranking-condutores/matriz-pontuacao` | Critérios, pesos e regras de cálculo do ranking. Tabela de eventos, classificação, regras e periodicidade |
 | Parâmetros do Ranking | `/ranking-condutores/dashboard-parametros` | 19 indicadores de eventos agrupados por nível de impacto. Cards clicáveis com navegação para detalhamento |
@@ -135,3 +179,18 @@ Componentes de gráfico reutilizáveis baseados em Recharts. Todos são genéric
     - `src/utils/auth.ts` — `redirectToLogin` (hard navigation, pois `/login` é do legado) e `getCurrentUser`.
     - `src/services/api.ts` — instância Axios com token no header e refresh automático em 401 (Promise Lock para evitar refresh simultâneo; falha => `resetTokens` + `redirectToLogin`). Resposta do refresh validada com Zod.
     - Variáveis de ambiente documentadas em `.env.example`.
+
+### Painel de Gestão
+
+- **Leaflet imperativo (sem react-leaflet)**: o mapa é criado com `useRef` + `L.map()`. Dá controle total de marcadores, animações e camadas, e evita conflito de peerDependencies do react-leaflet com o React 19.
+- **SSR desligado só para o mapa**: o Leaflet acessa `window` ao ser importado. A página (Client Component) importa o `FleetMap` com `next/dynamic` e `{ ssr: false }`, mostrando o `FleetMapSkeleton` enquanto carrega (no Next 16, `ssr: false` só é permitido em Client Components).
+- **Metadata em layout de servidor**: como a `page.tsx` é Client Component, o `title`/`description` ficam em `src/app/painel-de-gestao/layout.tsx`.
+- **Fonte única de dados do mapa**: bolhas por UF, clusters, lista lateral e KPI "Veículos ativos" (52) derivam do mesmo array, então os números sempre batem.
+- **GeoJSON das UFs embutido**: malha do IBGE simplificada (~88 KB), importada dinamicamente apenas pelo chunk do mapa.
+- **DOM seguro nos marcadores**: os `divIcon` são montados com `createElement`/`textContent`, sem `innerHTML`, para evitar XSS quando os dados vierem da API.
+- **`isolate` no container do mapa**: os panes do Leaflet usam z-index altos (400+). O `isolation: isolate` cria um novo contexto de empilhamento para o mapa não sobrepor drawers, tooltips e o painel da IA.
+- **Tema Índigo escopado**: a classe `.tema-indigo` (em `globals.css`) sobrescreve as variáveis da sidebar apenas em `/painel-de-gestao`. Para torná-lo global, basta mover os valores para `:root`.
+- **Poppins via `next/font`**: carregada em `src/app/layout.tsx` como variável `--font-poppins` e aplicada com a classe `.font-poppins` (drawers e popovers renderizam em portal, por isso também recebem a classe).
+- **Tiles do OpenStreetMap apenas para demo**: em produção, trocar por um provedor com SLA/chave (a política de uso do OSM não permite tráfego intenso).
+- **Correção no shadcn**: o `sheet.tsx` gerado vinha com `import { cn } from "cn"`; foi corrigido para `@/lib/utils`.
+- **Rota fora de `/ranking-condutores`**: o painel funciona direto na URL da Vercel. No domínio principal (Multi-Zone), `/painel-de-gestao` hoje pertence ao legado. Será preciso um rewrite específico (ou mover a rota) antes de publicar ali.
