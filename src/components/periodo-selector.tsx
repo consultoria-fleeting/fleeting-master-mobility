@@ -11,6 +11,8 @@
  *   onMesChange={setMes}
  *   onAnoChange={setAno}
  * />
+ *
+ * Com `opcaoTodosMeses`, aparece a opção "Todos os meses" (valor `""`), usada quando o mês é opcional.
  */
 
 "use client";
@@ -37,6 +39,8 @@ interface PeriodoSelectorProps {
   anoSelecionado: number;
   onMesChange: (mes: string) => void;
   onAnoChange: (ano: number) => void;
+  /** Exibe a opção "Todos os meses" (valor vazio). */
+  opcaoTodosMeses?: boolean;
 }
 
 export function PeriodoSelector({
@@ -44,6 +48,7 @@ export function PeriodoSelector({
   anoSelecionado,
   onMesChange,
   onAnoChange,
+  opcaoTodosMeses = false,
 }: PeriodoSelectorProps) {
   return (
     <div className="flex items-center gap-2">
@@ -54,6 +59,7 @@ export function PeriodoSelector({
         className="text-xs border border-border rounded-md px-3 py-1.5 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         aria-label="Selecionar mês"
       >
+        {opcaoTodosMeses && <option value="">Todos os meses</option>}
         {MESES.map((mes) => (
           <option key={mes} value={mes}>
             {mes}

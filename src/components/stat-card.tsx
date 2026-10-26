@@ -20,6 +20,8 @@ interface StatCardProps {
   variante?: Variante;
   onClick?: () => void;
   className?: string;
+  /** Classes de cor (fundo + texto) que substituem as da `variante`. Ex.: `getClassificationStyle(...).badgeClassName`. */
+  classeCor?: string;
 }
 
 const ESTILOS_VARIANTE: Record<Variante, string> = {
@@ -39,6 +41,7 @@ export function StatCard({
   variante = "default",
   onClick,
   className = "",
+  classeCor,
 }: StatCardProps) {
   return (
     <div
@@ -58,7 +61,7 @@ export function StatCard({
       className={`
         rounded-lg p-5 shadow-sm transition-all duration-200 hover:shadow-md
         ${onClick ? "cursor-pointer hover:scale-[1.02] active:scale-[0.98]" : ""}
-        ${ESTILOS_VARIANTE[variante]}
+        ${classeCor ?? ESTILOS_VARIANTE[variante]}
         ${className}
       `}
     >

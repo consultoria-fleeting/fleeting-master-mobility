@@ -1,144 +1,87 @@
 /**
  * Parâmetros do Ranking — Página
  *
- * Exibe os 19 indicadores de eventos agrupados por nível de impacto
- * na pontuação dos condutores.
- * Cada card é clicável e navega para /ranking-condutores/dashboard-parametros/{id}.
+ * Integrada ao backend `api-driver-scoring` (seções 4.7, 4.8 e 4.10 da spec):
+ * - Seletor de período (mês/ano) e filtros hierárquicos em cascata
+ * - Cards de eventos por nível de exposição (4.7) — clique abre o detalhe (4.9)
+ * - Gráfico de fadiga aguda × acumulada (4.10)
+ * - Gráfico de volume de eventos por tipo (4.8)
  *
- * Seções:
- * - Seletor de período (mês/ano) no header
- * - Barra de filtros (nome, gestor, filial, departamento, unidade)
- * - Cards de indicadores agrupados por nível de exposição ao risco
- *
- * Dados mockados, prontos para futura integração com backend.
- * TODO(backend): Substituir dados mock por chamadas à API.
- * TODO(security): Implementar autenticação/autorização quando integrar com backend.
+ * Cada seção busca seus próprios dados e trata loading/erro/vazio de forma independente.
  *
  * Rota: /ranking-condutores/dashboard-parametros
  */
 
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { ListChecks } from "lucide-react";
+import { EventsVolumeChart } from "@/components/events-volume-chart";
+import { FatigueDistributionChart } from "@/components/fatigue-distribution-chart";
+import { FiltrosHierarquicos } from "@/components/filtros-hierarquicos";
 import { PeriodoSelector } from "@/components/periodo-selector";
-import { FiltroBarra } from "@/components/filtro-barra";
-import { ParametroCard } from "@/components/parametro-card";
-import {
-  parametrosRanking,
-  gruposImpacto,
-} from "@/data/mock-parametros-ranking";
-import { opcoesFiltro } from "@/data/mock-condutores";
-import type { FiltrosState } from "@/types/condutor";
-
-/** Estado inicial dos filtros — nenhum filtro aplicado */
-const FILTROS_INICIAIS: FiltrosState = {
-  nome: "",
-  gestor: "",
-  departamento: "",
-  funcao: "",
-  negocio: "",
-  centroCusto: "",
-};
+import { RankingParametersCards } from "@/components/ranking-parameters-cards";
+import { useRankingPageFilters } from "@/hooks/use-ranking-page-filters";
+import { ALL_EVENTS_IDENTIFIER } from "@/types/driver-scoring";
+import { buildParameterDetailsQuery, getParameterDetailsPath } from "@/utils/ranking-search-params";
 
 export default function DashboardParametrosPage() {
-  const router = useRouter();
+  const {
+    mesSelecionado,
+    setMesSelecionado,
+    anoSelecionado,
+    setAnoSelecionado,
+    mesNumero,
+    filtros,
+    setFiltros,
+    opcoesFiltro,
+    filtrosApi,
+  } = useRankingPageFilters();
 
-  /* ---------- Estado do período (relativo à data atual) ---------- */
-  const NOMES_MESES = [
-    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
-  ];
-  const hoje = new Date();
-  const [mesSelecionado, setMesSelecionado] = useState(NOMES_MESES[hoje.getMonth()]);
-  const [anoSelecionado, setAnoSelecionado] = useState(hoje.getFullYear());
-
-  /* ---------- Estado dos filtros ---------- */
-  const [filtros, setFiltros] = useState<FiltrosState>(FILTROS_INICIAIS);
-
-  const handleFiltroChange = useCallback(
-    <K extends keyof FiltrosState>(campo: K, valor: FiltrosState[K]) => {
-      setFiltros((prev) => ({ ...prev, [campo]: valor }));
-    },
-    []
-  );
-
-  /**
-   * Na versão mock, os totais dos cards não mudam com os filtros,
-   * pois os dados são estáticos. Quando integrado com o backend,
-   * os filtros serão enviados na requisição e os totais refletirão
-   * a seleção. Aqui mantemos a estrutura pronta para isso.
-   *
-   * TODO(backend): Filtrar dados por período e filtros selecionados.
-   */
-  const parametrosFiltrados = useMemo(() => {
-    return parametrosRanking;
-  }, []);
-
-  /** Navega para detalhamento do parâmetro mantendo contexto */
-  function handleParametroClick(parametroId: string) {
-    const params = new URLSearchParams({
-      mes: mesSelecionado,
-      ano: String(anoSelecionado),
-    });
-    router.push(`/ranking-condutores/dashboard-parametros/${parametroId}?${params.toString()}`);
-  }
+  const linkTodosEventos = `${getParameterDetailsPath(ALL_EVENTS_IDENTIFIER)}?${buildParameterDetailsQuery(
+    anoSelecionado,
+    mesNumero,
+    filtrosApi,
+  )}`;
 
   return (
     <div className="animate-fade-in p-4 lg:p-6 space-y-6">
       {/* Header com título e seletor de período */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            Parâmetros do Ranking
-          </h1>
+          <h1 className="text-2xl font-bold text-foreground">Parâmetros do Ranking</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Indicadores agrupados por nível de impacto na pontuação. Clique para
-            ver detalhes.
+            Indicadores agrupados por nível de impacto na pontuação. Clique para ver detalhes.
           </p>
         </div>
 
-        <PeriodoSelector
-          mesSelecionado={mesSelecionado}
-          anoSelecionado={anoSelecionado}
-          onMesChange={setMesSelecionado}
-          onAnoChange={setAnoSelecionado}
-        />
+        <div className="flex items-center gap-2 flex-wrap">
+          <Link
+            href={linkTodosEventos}
+            className="inline-flex items-center gap-1.5 text-xs border border-border rounded-md px-3 py-1.5 bg-background hover:bg-muted transition-colors"
+          >
+            <ListChecks className="w-3.5 h-3.5" aria-hidden="true" />
+            Ver todos os eventos
+          </Link>
+
+          <PeriodoSelector
+            mesSelecionado={mesSelecionado}
+            anoSelecionado={anoSelecionado}
+            onMesChange={setMesSelecionado}
+            onAnoChange={setAnoSelecionado}
+          />
+        </div>
       </div>
 
       {/* Barra de filtros */}
-      <FiltroBarra
-        filtros={filtros}
-        opcoes={opcoesFiltro}
-        onFiltroChange={handleFiltroChange}
-      />
+      <FiltrosHierarquicos filtros={filtros} opcoes={opcoesFiltro} onChange={setFiltros} />
 
-      {/* Cards agrupados por nível de impacto */}
-      {gruposImpacto.map((grupo) => {
-        const itensDoGrupo = parametrosFiltrados.filter(
-          (p) => p.grupo === grupo.grupo
-        );
+      {/* Cards agrupados por nível de exposição (4.7) */}
+      <RankingParametersCards ano={anoSelecionado} mes={mesNumero} filtros={filtrosApi} />
 
-        if (itensDoGrupo.length === 0) return null;
-
-        return (
-          <section key={grupo.grupo} className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {itensDoGrupo.map((parametro) => (
-                <ParametroCard
-                  key={parametro.id}
-                  label={parametro.label}
-                  total={parametro.total}
-                  icone={parametro.icone}
-                  bgClasse={grupo.bgClasse}
-                  textoClasse={grupo.textoClasse}
-                  onClick={() => handleParametroClick(parametro.id)}
-                />
-              ))}
-            </div>
-          </section>
-        );
-      })}
+      {/* Gráficos */}
+      <FatigueDistributionChart ano={anoSelecionado} mes={mesNumero} filtros={filtrosApi} />
+      <EventsVolumeChart ano={anoSelecionado} mes={mesNumero} filtros={filtrosApi} />
     </div>
   );
 }

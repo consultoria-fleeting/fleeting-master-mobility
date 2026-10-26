@@ -4,14 +4,19 @@
  * Exibe a pontuação de um mês em um círculo colorido conforme
  * a classificação de risco correspondente.
  *
+ * - Sem `classificacao`: deduz a cor pelos limites fixos do mock (`getClassificacao`).
+ * - Com `classificacao` (label dinâmico vindo da API): usa `getClassificationStyle`.
+ *
  * Reutilizável em tabelas anuais e futuras visualizações de
  * pontuação por período.
  *
  * @example
  * <ScoreCircle pontuacao={92} />
+ * <ScoreCircle pontuacao={92} classificacao="Referência" />
  */
 
 import { getClassificacao } from "@/data/mock-condutores";
+import { formatScore, getClassificationStyle } from "@/utils/driver-scoring-helpers";
 
 const CORES_POR_CLASSIFICACAO: Record<string, string> = {
   referencia: "bg-[hsl(var(--referencia))] text-black",
@@ -22,21 +27,25 @@ const CORES_POR_CLASSIFICACAO: Record<string, string> = {
 
 interface ScoreCircleProps {
   pontuacao: number;
+  /** Label da classificação retornado pela API (ex.: "Baixa Exposição ao Risco"). */
+  classificacao?: string;
 }
 
-export function ScoreCircle({ pontuacao }: ScoreCircleProps) {
-  const classificacao = getClassificacao(pontuacao);
+export function ScoreCircle({ pontuacao, classificacao }: ScoreCircleProps) {
+  const cor = classificacao
+    ? getClassificationStyle(classificacao).badgeClassName
+    : CORES_POR_CLASSIFICACAO[getClassificacao(pontuacao)];
 
   return (
     <span
       className={`
         inline-flex items-center justify-center
-        w-8 h-8 rounded-full text-[10px] font-bold
-        ${CORES_POR_CLASSIFICACAO[classificacao]}
+        min-w-8 h-8 px-1 rounded-full text-[10px] font-bold
+        ${cor}
       `}
-      title={`${pontuacao} pts`}
+      title={classificacao ? `${formatScore(pontuacao)} pts — ${classificacao}` : `${pontuacao} pts`}
     >
-      {pontuacao}
+      {formatScore(pontuacao)}
     </span>
   );
 }
