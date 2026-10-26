@@ -117,6 +117,11 @@ export const eventTypePathSchema = z.string().trim().min(1, "Informe o tipo do e
 // ---------------------------------------------------------------------------
 
 export const driverPerformanceListQuerySchema = z.object({
+  /** `todos` equivale a não filtrar, então nem é enviado ao backend. */
+  classification: z
+    .enum(["todos", "referencia", "baixa", "media", "alta"])
+    .optional()
+    .transform((value) => (value === "todos" ? undefined : value)),
   year: yearSchema.optional(),
   month: monthSchema.optional(),
   ...hierarchyFiltersShape,
@@ -145,4 +150,35 @@ export const driverIdentifierPathSchema = z.string().trim().min(1, "Informe o id
 
 export const selectQuerySchema = z.object({
   company_id: uuidSchema.optional(),
+});
+
+// ---------------------------------------------------------------------------
+// Gestão de Exceções (FLEET-2301)
+// ---------------------------------------------------------------------------
+
+export const JUSTIFICATION_MIN_LENGTH = 10;
+export const JUSTIFICATION_MAX_LENGTH = 500;
+
+/** `GET /exceptions` — o backend aceita `pageSize` (ou `limit`, máx. 100). */
+export const exceptionsListQuerySchema = z.object({
+  driverName: z.string().trim().max(100).optional(),
+  page: pageSchema.optional(),
+  pageSize: limitMax100Schema.optional(),
+});
+
+/** Path params de exceções: sempre UUID (o backend usa `ParseUUIDPipe`). */
+export const exceptionIdPathSchema = uuidSchema;
+export const driverUuidPathSchema = uuidSchema;
+export const eventUuidPathSchema = uuidSchema;
+
+/**
+ * Body de `POST /drivers/:driverId/events/:eventId/exceptions`.
+ * `strictObject` rejeita campos extras (o backend responde 400 se `driverId`/`eventId` forem enviados).
+ */
+export const createExceptionBodySchema = z.strictObject({
+  justification: z
+    .string()
+    .trim()
+    .min(JUSTIFICATION_MIN_LENGTH, `A justificativa deve ter ao menos ${JUSTIFICATION_MIN_LENGTH} caracteres`)
+    .max(JUSTIFICATION_MAX_LENGTH, `A justificativa deve ter no máximo ${JUSTIFICATION_MAX_LENGTH} caracteres`),
 });

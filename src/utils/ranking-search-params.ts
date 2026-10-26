@@ -2,7 +2,11 @@ import {
   parameterDetailsSearchParamsSchema,
   type ParameterDetailsSearchParams,
 } from "@/schemas/ranking-search-params";
-import type { DashboardHierarchyFilters, ExposureLevelBucket } from "@/types/driver-scoring";
+import type {
+  DashboardHierarchyFilters,
+  DriverClassificationFilter,
+  ExposureLevelBucket,
+} from "@/types/driver-scoring";
 import { sanitizeParams } from "@/utils/sanitize-params";
 
 /**
@@ -33,4 +37,14 @@ export function buildParameterDetailsQuery(
 /** Rota de detalhe de um evento (`eventType` pode ser `all-events`). */
 export function getParameterDetailsPath(eventType: string): string {
   return `/ranking-condutores/dashboard-parametros/${encodeURIComponent(eventType)}/`;
+}
+
+/** Rota da lista de condutores de uma categoria (Tela 2); o contexto (período e filtros) vai na query string. */
+export function getCategoryPath(
+  classification: DriverClassificationFilter,
+  year: number,
+  month: number,
+  filters: DashboardHierarchyFilters,
+): string {
+  return `/ranking-condutores/condutores-categoria/${classification}/?${buildParameterDetailsQuery(year, month, filters)}`;
 }

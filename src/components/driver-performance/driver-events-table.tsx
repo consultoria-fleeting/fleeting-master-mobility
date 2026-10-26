@@ -1,26 +1,43 @@
 /**
  * DriverEventsTable — Eventos/infrações do condutor (seção 4.12, `events`).
  *
- * Colunas: data, evento, origem, severidade, pontos e impacto. Quando `has_exception === true`
+ * Colunas: data, evento, origem, severidade, pontos, impacto e ações. Quando `has_exception === true`
  * o evento é sinalizado com a etiqueta "Desconsiderado" e a justificativa da exceção
  * (o impacto já vem zerado do backend).
  *
+ * Ação "Aplicar exceção" (FLEET-2301): habilitada apenas se `eligible === true` e o usuário tiver
+ * perfil de gestor; caso contrário fica desabilitada e mostra `ineligible_reason` no tooltip.
+ *
  * @example
- * <DriverEventsTable events={data.events.data} pagination={data.events.pagination} onPaginaChange={setPagina} />
+ * <DriverEventsTable
+ *   driverId={data.driver.id}
+ *   events={data.events.data}
+ *   pagination={data.events.pagination}
+ *   onPaginaChange={setPagina}
+ *   onExceptionApplied={refetch}
+ * />
  */
 
+import { useState } from "react";
 import { ShieldCheck } from "lucide-react";
+import { ApplyExceptionDialog } from "@/components/driver-performance/apply-exception-dialog";
 import { PaginacaoNumerada } from "@/components/paginacao-numerada";
+import { Button } from "@/components/ui/button";
 import type { DriverEvent, PaginationTotalPages } from "@/types/driver-scoring";
 import { formatDateTime, getSeverityClassName } from "@/utils/driver-scoring-display";
 import { displayValue } from "@/utils/driver-scoring-helpers";
+import { canManageExceptions } from "@/utils/permissions";
 
 interface DriverEventsTableProps {
+  /** UUID do condutor (`driver.id`), usado ao aplicar exceções. */
+  driverId: string;
   events: DriverEvent[];
   pagination: PaginationTotalPages;
   /** Desabilita a paginação enquanto uma nova página carrega. */
   carregando?: boolean;
   onPaginaChange: (pagina: number) => void;
+  /** Chamado após aplicar uma exceção, para recarregar o detalhe do condutor. */
+  onExceptionApplied: () => void;
 }
 
 /** Nome do evento + selo de exceção com a justificativa. */
@@ -44,12 +61,43 @@ function EventoComExcecao({ evento }: { evento: DriverEvent }) {
   );
 }
 
+/** Botão "Aplicar exceção"; desabilitado (com motivo no tooltip) quando não é possível aplicar. */
+function BotaoAplicarExcecao({
+  evento,
+  podeGerenciar,
+  onClick,
+}: {
+  evento: DriverEvent;
+  podeGerenciar: boolean;
+  onClick: () => void;
+}) {
+  // `title` fica no wrapper porque botões desabilitados não disparam hover.
+  const motivoBloqueio = !podeGerenciar
+    ? "Apenas gestores de frota podem aplicar exceções."
+    : !evento.eligible
+      ? (evento.ineligible_reason ?? "Este evento não é elegível para exceção.")
+      : undefined;
+
+  return (
+    <span title={motivoBloqueio} className="inline-block">
+      <Button variant="outline" size="xs" disabled={Boolean(motivoBloqueio)} onClick={onClick}>
+        Aplicar exceção
+      </Button>
+    </span>
+  );
+}
+
 export function DriverEventsTable({
+  driverId,
   events,
   pagination,
   carregando = false,
   onPaginaChange,
+  onExceptionApplied,
 }: DriverEventsTableProps) {
+  const [eventoSelecionado, setEventoSelecionado] = useState<DriverEvent | null>(null);
+  const podeGerenciar = canManageExceptions();
+
   return (
     <div className="bg-card rounded-lg border border-border p-5">
       <h3 className="text-base font-semibold text-foreground mb-4">Eventos Registrados</h3>
@@ -64,6 +112,7 @@ export function DriverEventsTable({
               <th className="text-left py-2 px-2">Severidade</th>
               <th className="text-right py-2 px-2">Pontos</th>
               <th className="text-right py-2 px-2">Impacto</th>
+              <th className="text-right py-2 px-2">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -91,11 +140,22 @@ export function DriverEventsTable({
                   >
                     {evento.impact}
                   </td>
+                  <td className="py-2 px-2 text-right">
+                    {evento.has_exception ? (
+                      <span className="text-[11px] text-muted-foreground">Desconsiderado</span>
+                    ) : (
+                      <BotaoAplicarExcecao
+                        evento={evento}
+                        podeGerenciar={podeGerenciar}
+                        onClick={() => setEventoSelecionado(evento)}
+                      />
+                    )}
+                  </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={6} className="text-center py-8 text-muted-foreground">
+                <td colSpan={7} className="text-center py-8 text-muted-foreground">
                   Nenhum evento registrado no período.
                 </td>
               </tr>
@@ -113,6 +173,16 @@ export function DriverEventsTable({
         desabilitado={carregando}
         onPaginaChange={onPaginaChange}
       />
+
+      {eventoSelecionado && (
+        <ApplyExceptionDialog
+          key={eventoSelecionado.id}
+          driverId={driverId}
+          evento={eventoSelecionado}
+          onClose={() => setEventoSelecionado(null)}
+          onApplied={onExceptionApplied}
+        />
+      )}
     </div>
   );
 }

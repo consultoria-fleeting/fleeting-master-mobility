@@ -1,11 +1,16 @@
 import type { z } from "zod";
 import {
   annualEvolutionQuerySchema,
+  createExceptionBodySchema,
   distributionQuerySchema,
   driverIdentifierPathSchema,
   driverPerformanceDetailQuerySchema,
   driverPerformanceListQuerySchema,
+  driverUuidPathSchema,
   eventTypePathSchema,
+  eventUuidPathSchema,
+  exceptionIdPathSchema,
+  exceptionsListQuerySchema,
   rankingParameterDetailsQuerySchema,
   rankingParametersQuerySchema,
   rankingQuerySchema,
@@ -16,6 +21,9 @@ import type {
   AnnualEvolutionQueryParams,
   AnnualEvolutionResponse,
   BottomScoringDriversResponse,
+  CreateExceptionBody,
+  CreateExceptionResponse,
+  DeleteExceptionResponse,
   DistributionQueryParams,
   DriverCategoriesResponse,
   DriverPerformanceDetailQueryParams,
@@ -24,6 +32,9 @@ import type {
   DriverPerformanceListResponse,
   DriversDistributionResponse,
   EventsVolumeResponse,
+  ExceptionItem,
+  ExceptionsListResponse,
+  ExceptionsQueryParams,
   FatigueDistributionResponse,
   RankingAnnualResponse,
   RankingMonthlyResponse,
@@ -32,6 +43,7 @@ import type {
   RankingParametersQueryParams,
   RankingParametersResponse,
   RankingQueryParams,
+  ScoringMatrixResponse,
   SelectOption,
   SelectQueryParams,
   TopReferenceDriversResponse,
@@ -200,6 +212,59 @@ export function getDriverPerformanceDetail(
     `/dashboard/driver-performance/${encodeURIComponent(safeIdentifier)}`,
     buildQuery(driverPerformanceDetailQuerySchema, params),
   );
+}
+
+// ---------------------------------------------------------------------------
+// Matriz de Pontuação — GET /dashboard/scoring-matrix
+// ---------------------------------------------------------------------------
+
+/** Regras, faixas de classificação e fatores de quilometragem da organização do token (sem query params). */
+export function getScoringMatrix(): Promise<ScoringMatrixResponse> {
+  return get("/dashboard/scoring-matrix");
+}
+
+// ---------------------------------------------------------------------------
+// Gestão de Exceções (FLEET-2301)
+// Perfis permitidos: FLEETING, ADMIN, MANAGER e SUPERADMIN (os demais recebem 403).
+// ---------------------------------------------------------------------------
+
+/** Histórico de exceções da organização (mais recentes primeiro). */
+export function getExceptions(params: ExceptionsQueryParams = {}): Promise<ExceptionsListResponse> {
+  return get("/exceptions", buildQuery(exceptionsListQuerySchema, params));
+}
+
+/** Detalhe de uma exceção. Retorna 404 se ela for de outra organização. */
+export function getException(exceptionId: string): Promise<ExceptionItem> {
+  const safeId = exceptionIdPathSchema.parse(exceptionId);
+  return get(`/exceptions/${safeId}`);
+}
+
+/**
+ * Aplica uma exceção (desconsidera o evento e recalcula a pontuação do mês).
+ * @param driverId `driver.id` (UUID) — nunca o nome do condutor.
+ * @param eventId `event.id` (UUID da dedução).
+ * @param body Somente `justification` (10 a 500 caracteres); campos extras geram 400.
+ */
+export async function createException(
+  driverId: string,
+  eventId: string,
+  body: CreateExceptionBody,
+): Promise<CreateExceptionResponse> {
+  const safeDriverId = driverUuidPathSchema.parse(driverId);
+  const safeEventId = eventUuidPathSchema.parse(eventId);
+  const safeBody = createExceptionBodySchema.parse(body);
+  const response = await driverScoringApi.post<CreateExceptionResponse>(
+    `/drivers/${safeDriverId}/events/${safeEventId}/exceptions`,
+    safeBody,
+  );
+  return response.data;
+}
+
+/** Revoga uma exceção: reativa o desconto do evento e restaura a pontuação do mês. */
+export async function deleteException(exceptionId: string): Promise<DeleteExceptionResponse> {
+  const safeId = exceptionIdPathSchema.parse(exceptionId);
+  const response = await driverScoringApi.delete<DeleteExceptionResponse>(`/exceptions/${safeId}`);
+  return response.data;
 }
 
 // ---------------------------------------------------------------------------

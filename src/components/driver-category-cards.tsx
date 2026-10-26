@@ -10,6 +10,7 @@
 
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Trophy, Users } from "lucide-react";
 import { QueryState } from "@/components/query-state";
 import { StatCard } from "@/components/stat-card";
@@ -17,7 +18,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { getDriverCategories } from "@/services/driver-scoring.service";
 import type { DashboardHierarchyFilters } from "@/types/driver-scoring";
-import { getClassificationStyle } from "@/utils/driver-scoring-helpers";
+import { getCategoryFilter, getClassificationStyle } from "@/utils/driver-scoring-helpers";
+import { getCategoryPath } from "@/utils/ranking-search-params";
 
 /** Categoria que o backend usa para o card de total. */
 const TOTAL_CATEGORY = "total";
@@ -32,6 +34,7 @@ interface DriverCategoryCardsProps {
 }
 
 export function DriverCategoryCards({ ano, mes, filtros }: DriverCategoryCardsProps) {
+  const router = useRouter();
   const { data, isLoading, error, refetch } = useApiQuery(getDriverCategories, {
     year: ano,
     month: mes,
@@ -58,6 +61,7 @@ export function DriverCategoryCards({ ano, mes, filtros }: DriverCategoryCardsPr
         {data?.map((card) => {
           const isTotal = card.category === TOTAL_CATEGORY;
           const estilo = getClassificationStyle(card.title);
+          const classificacao = getCategoryFilter(card.category, card.title);
 
           return (
             <StatCard
@@ -68,6 +72,11 @@ export function DriverCategoryCards({ ano, mes, filtros }: DriverCategoryCardsPr
               icone={isTotal ? Users : estilo.level === "referencia" ? Trophy : undefined}
               variante={isTotal ? "primary" : "default"}
               classeCor={isTotal ? undefined : estilo.badgeClassName}
+              onClick={
+                classificacao
+                  ? () => router.push(getCategoryPath(classificacao, ano, mes, filtros))
+                  : undefined
+              }
             />
           );
         })}

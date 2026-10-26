@@ -34,3 +34,9 @@ export const parameterDetailsSearchParamsSchema = z.object({
 });
 
 export type ParameterDetailsSearchParams = z.infer<typeof parameterDetailsSearchParamsSchema>;
+
+/**
+ * Segmento `[categoria]` da rota `/ranking-condutores/condutores-categoria/[categoria]`.
+ * Entrada não confiável: qualquer valor fora da lista é tratado como "categoria não encontrada".
+ */
+export const categoryPathSchema = z.enum(["todos", "referencia", "baixa", "media", "alta"]);

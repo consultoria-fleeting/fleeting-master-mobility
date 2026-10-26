@@ -41,15 +41,19 @@ Micro frontend que futuramente absorverá módulos do **Master Mobility** (softw
 | **EventsVolumeChart** | `src/components/events-volume-chart.tsx` | Barras horizontais com o volume de eventos por tipo (4.8). |
 | **FatigueDistributionChart** | `src/components/fatigue-distribution-chart.tsx` | Fadiga aguda × acumulada (4.10) com `groupBy` dinâmico (`department`, `unit` ou `company`). Prop `groupByInicial`. |
 | **ParameterDetailsTable** | `src/components/parameter-details-table.tsx` | Drill-down de um evento (4.9): tabela paginada por `lastPage`, data em PT-BR. Linhas **não** são clicáveis (a API não devolve o id do condutor). |
-| **DriverPerformanceReport** | `src/components/driver-performance-report.tsx` | Listagem analítica de performance (4.11): tabela paginada, link por UUID e exportação Excel (CSV) com `export: true`. |
+| **DriverPerformanceReport** | `src/components/driver-performance-report.tsx` | Listagem analítica de performance (4.11): tabela paginada, link por UUID e exportação Excel (CSV) com `export: true`. Prop opcional `classificacao` (`todos`/`referencia`/`baixa`/`media`/`alta`) filtra a listagem e a exportação (Tela 2). |
 | **DriverPerformanceKpis** | `src/components/driver-performance/driver-performance-kpis.tsx` | Cards de indicadores do condutor (4.12): acumulado do ano, último mês fechado (+ classificação) e pontuação do mês. `null` vira "-". |
 | **DriverMonthlyScoresChart** | `src/components/driver-performance/driver-monthly-scores-chart.tsx` | Evolução mensal (12 meses) do condutor; mês sem dado (`null`) fica sem barra. |
-| **DriverEventsTable** | `src/components/driver-performance/driver-events-table.tsx` | Eventos/infrações do condutor com paginação. Sinaliza `has_exception` (evento riscado + selo "Desconsiderado" com a justificativa). |
+| **DriverEventsTable** | `src/components/driver-performance/driver-events-table.tsx` | Eventos/infrações do condutor com paginação. Sinaliza `has_exception` (evento riscado + selo "Desconsiderado" com a justificativa). Coluna **Ações** com "Aplicar exceção": habilitado só se `eligible === true` e o perfil for gestor (`canManageExceptions`); senão desabilitado com `ineligible_reason` no tooltip. Props: `driverId` (UUID), `events`, `pagination`, `onPaginaChange`, `onExceptionApplied` (refetch). |
+| **ApplyExceptionDialog** | `src/components/driver-performance/apply-exception-dialog.tsx` | Modal para aplicar exceção (`POST /drivers/:driverId/events/:eventId/exceptions`). Justificativa 10–500 caracteres validada com Zod, contador, loading, erro por status HTTP (400/403/404/409/422) e resultado `scoreBefore → scoreAfter`. Usar com `key={evento.id}`. |
+| **ExceptionsHistoryTable** | `src/components/exceptions/exceptions-history-table.tsx` | Histórico de exceções (`GET /exceptions`): busca por condutor (debounce 400 ms), `PaginacaoNumerada`, link por UUID e botão "Revogar" (só gestores). |
+| **RevokeExceptionDialog** | `src/components/exceptions/revoke-exception-dialog.tsx` | Confirmação de revogação (`DELETE /exceptions/:id`); mostra a pontuação restaurada. Usar com `key={excecao.id}`. |
+| **FatoresQuilometragem** | `src/components/fatores-quilometragem.tsx` | Tabela de fatores de quilometragem da Matriz de Pontuação (`km_factors`). |
 | **DriverPredictiveTab** | `src/components/driver-performance/driver-predictive-tab.tsx` | Aba "Análise Preditiva" (mock): IRC derivado da pontuação real e seções em desenvolvimento. |
 | **InfoTooltip** | `src/components/info-tooltip.tsx` | Ícone "i" com tooltip explicativo. Usa Tooltip do shadcn/ui. Props opcionais `iconeClassName` e `conteudoClassName` para customizar o visual (usadas na Torre de Controle). |
 | **RankingCondutores** | `src/components/ranking-condutores.tsx` | Tabela de ranking integrada à API (4.1) com abas Mensal/Anual, paginação sem total (`PaginacaoSimples`) e scroll lateral na aba anual (12 meses, "-" quando `null`). Props: `ano`, `mes`, `managerId`. |
 | **ScoreCircle** | `src/components/score-circle.tsx` | Indicador circular de pontuação mensal. Prop opcional `classificacao` (label da API) define a cor via `getClassificationStyle`. Usado na aba anual do ranking. |
-| **TabelaPontuacao** | `src/components/tabela-pontuacao.tsx` | Tabela de Pontuação por Evento da Matriz. Exibe Origem (badge colorido), Evento e Pontuação. Destaque em vermelho para -100 pts. |
+| **TabelaPontuacao** | `src/components/tabela-pontuacao.tsx` | Tabela de Pontuação por Evento da Matriz. Exibe Origem (badge colorido, com estilo neutro para origens desconhecidas), Evento e Pontuação. Destaque em vermelho para -100 pts. |
 | **ClassificacaoGrid** | `src/components/classificacao-grid.tsx` | Grid de cards coloridos com as faixas de classificação dos condutores (Referência, Baixa, Média, Alta). |
 | **RegrasCalculoLista** | `src/components/regras-calculo-lista.tsx` | Lista numerada de regras de cálculo do ranking. Suporta destaques (strong) normais e em cor de perigo. |
 | **PeriodicidadeSecao** | `src/components/periodicidade-secao.tsx` | Seção de periodicidade de atualização do ranking. Ícone de relógio e textos com destaques. |
@@ -107,13 +111,15 @@ Painéis e blocos da tela `/torre-de-controle` (identidade Índigo, fonte Poppin
 
 ### Utilitários
 
-- **getApiErrorMessage** (`src/utils/api-error.ts`) — Converte erros (Axios/Zod/desconhecido) em mensagens amigáveis em PT-BR.
+- **getApiErrorMessage, getExceptionActionErrorMessage** (`src/utils/api-error.ts`) — Converte erros (Axios/Zod/desconhecido) em mensagens amigáveis em PT-BR. 401 (sessão) e 403 (escopo/perfil) têm mensagens distintas; `getExceptionActionErrorMessage` trata 400/403/404/409/422 ao aplicar/revogar exceções.
+- **canManageExceptions** (`src/utils/permissions.ts`) — Lê a claim `permission` do JWT (sem validar assinatura) e informa se o perfil é de gestor (FLEETING, ADMIN, MANAGER, SUPERADMIN, GESTOR). É só conveniência de UI: o backend é a autoridade (403). Se não conseguir determinar, retorna `true`.
+- **mapRulesToEventos, mapClassificationsToFaixas** (`src/utils/scoring-matrix-mapper.ts`) — Adaptam `GET /dashboard/scoring-matrix` aos componentes `TabelaPontuacao` e `ClassificacaoGrid` (regras agrupadas Telemetria → Multa → Registro).
 - **buildClassificationChartData** (`src/utils/classification-chart-data.ts`) — Converte classificações dinâmicas da API em linhas e séries para os gráficos de barras (chaves seguras `c0`, `c1`...).
 - **toHierarchyFilters** (`src/utils/ranking-filtros.ts`) — Converte o estado dos filtros da tela para os query params snake_case da API.
-- **RANKING_ANNUAL_MONTHS, formatScore, displayValue, getDriverPerformancePath** (`src/utils/driver-scoring-helpers.ts`) — Colunas de meses da visão anual, formatação de pontuação, "-" para nulos e rota do detalhe do condutor.
+- **RANKING_ANNUAL_MONTHS, formatScore, displayValue, getDriverPerformancePath, getCategoryFilter** (`src/utils/driver-scoring-helpers.ts`) — Colunas de meses da visão anual, formatação de pontuação, "-" para nulos, rota do detalhe do condutor e conversão do card (4.2) no filtro `classification` do 4.11.
 - **formatDate, formatDateTime, maskDocument, getDynamicGroupName, EXPOSURE_LEVELS, getEventTypeIcon, getSeverityClassName** (`src/utils/driver-scoring-display.ts`) — Datas em PT-BR (fuso America/Sao_Paulo), documento mascarado (`***` + 4 últimos dígitos), nome do grupo dinâmico, níveis de exposição (título e cores), ícone por evento e cor da severidade.
 - **buildCsv, downloadCsv, sanitizeCsvCell** (`src/utils/csv.ts`) — Exportação CSV compatível com Excel (BOM UTF-8, `;`), com proteção contra injeção de fórmula (`=`, `+`, `-`, `@` em textos).
-- **parseParameterDetailsSearchParams, buildParameterDetailsQuery, getParameterDetailsPath** (`src/utils/ranking-search-params.ts`) — Lê/monta a query string do detalhe de parâmetro. O schema Zod (`src/schemas/ranking-search-params.ts`) descarta ids que não são UUID.
+- **parseParameterDetailsSearchParams, buildParameterDetailsQuery, getParameterDetailsPath, getCategoryPath** (`src/utils/ranking-search-params.ts`) — Lê/monta a query string do detalhe de parâmetro e a rota de Condutores por Categoria (reaproveitando período e filtros). Os schemas Zod (`src/schemas/ranking-search-params.ts`) descartam ids que não são UUID e validam o segmento `[categoria]`.
 
 ### Componentes de Gráficos Genéricos (`src/components/charts/`)
 
@@ -137,6 +143,8 @@ Componentes de gráfico reutilizáveis baseados em Recharts. Todos são genéric
 | Button | `src/components/ui/button.tsx` |
 | Sheet (drawer lateral) | `src/components/ui/sheet.tsx` |
 | Skeleton | `src/components/ui/skeleton.tsx` |
+| Dialog (modal) | `src/components/ui/dialog.tsx` |
+| Textarea | `src/components/ui/textarea.tsx` |
 
 ---
 
@@ -159,6 +167,9 @@ Componentes de gráfico reutilizáveis baseados em Recharts. Todos são genéric
 | `KpiTorre`, `VeiculoAtencao`, `CondutorAtencao`, `AtividadeRecente`, `ItemTco`, `ItemManutencao`, `BarraKm` | `src/types/torre-de-controle.ts` | Tipos dos blocos da Torre de Controle |
 | `StatusVeiculo`, `CategoriaVeiculo`, `EstadoBrasil`, `VeiculoFrota`, `ItemCluster`, `FiltrosMapa`, `ComandoFocoMapa` | `src/types/frota-mapa.ts` | Contratos do mapa da frota (macro por UF, micro por veículo, filtros e comando de foco) |
 | Tipos de Request/Response do `api-driver-scoring` (ranking, categorias, distribuição, parâmetros, performance, selects) | `src/types/driver-scoring.ts` | Contrato fiel do backend de Ranking de Condutores (spec `API_DRIVER_SCORING_SPEC.md`) |
+| `ExceptionItem`, `ExceptionsListResponse`, `ExceptionsQueryParams`, `CreateExceptionBody/Response`, `DeleteExceptionResponse` | `src/types/driver-scoring.ts` | Contrato da Gestão de Exceções (`frontend-integration-guide.md`, FLEET-2301) |
+| `ScoringMatrixResponse`, `ScoringMatrixRule`, `ScoringMatrixClassification`, `ScoringMatrixKmFactor` | `src/types/driver-scoring.ts` | Contrato de `GET /dashboard/scoring-matrix` |
+| `DriverClassificationFilter`, `DriverEventStatus` | `src/types/driver-scoring.ts` | Filtro `classification` do 4.11 e status do evento (`Confirmado`/`Desconsiderado`) |
 
 ---
 
@@ -167,7 +178,7 @@ Componentes de gráfico reutilizáveis baseados em Recharts. Todos são genéric
 Integração com o backend `api-driver-scoring` (spec: `API_DRIVER_SCORING_SPEC.md`).
 
 - **`driverScoringApi`** (`src/services/api.ts`) — Instância Axios com baseURL `${NEXT_PUBLIC_API_GATEWAY}/api-driver-scoring` (barra final da variável removida; fallback do gateway `https://api.master-mobility.com`). Usa os mesmos interceptors da `api` (token Bearer + refresh em 401 com Promise Lock).
-- **`driver-scoring.service.ts`** (`src/services/`) — Funções dos 12 endpoints do dashboard (`getRanking`, `getDriverCategories`, `getDriversDistribution`, `getAnnualClassificationEvolution`, `getTopReferenceDrivers`, `getBottomScoringDrivers`, `getRankingParameters`, `getEventsVolume`, `getRankingParameterDetails`, `getFatigueDistribution`, `getDriverPerformanceList`, `getDriverPerformanceDetail`) e dos 5 selects (`getCompanyOptions`, `getUnitOptions`, `getDepartmentOptions`, `getCostCenterOptions`, `getManagerOptions`).
+- **`driver-scoring.service.ts`** (`src/services/`) — Funções dos 12 endpoints do dashboard (`getRanking`, `getDriverCategories`, `getDriversDistribution`, `getAnnualClassificationEvolution`, `getTopReferenceDrivers`, `getBottomScoringDrivers`, `getRankingParameters`, `getEventsVolume`, `getRankingParameterDetails`, `getFatigueDistribution`, `getDriverPerformanceList`, `getDriverPerformanceDetail`), dos 5 selects (`getCompanyOptions`, `getUnitOptions`, `getDepartmentOptions`, `getCostCenterOptions`, `getManagerOptions`) e, a partir da Etapa 4, da matriz (`getScoringMatrix`) e das exceções (`getExceptions`, `getException`, `createException`, `deleteException`).
 - **`schemas/driver-scoring.ts`** (`src/schemas/`) — Schemas Zod de cada rota. Validam e fazem whitelist dos query params (chaves fora da matriz da seção 3 da spec são descartadas).
 - **`sanitizeParams`** (`src/utils/sanitize-params.ts`) — Remove chaves `undefined`, `null` e `""` antes do envio.
 - **`EVENT_TYPE_LABELS` / `getEventTypeLabel`** (`src/utils/driver-scoring-helpers.ts`) — Traduz códigos de evento para PT-BR (fallback: `SNAKE_CASE` -> Title Case).
@@ -195,12 +206,13 @@ Integração com o backend `api-driver-scoring` (spec: `API_DRIVER_SCORING_SPEC.
 |---|---|---|
 | Torre de Controle (protótipo) | `/torre-de-controle` | Visão consolidada da frota: filtros, assistente de IA, 5 KPIs, veículos/condutores que exigem atenção, mapa Leaflet (Macro/Micro), atividade recente, resumo do TCO, KMs rodados e manutenção. Dados 100% mockados e sem exigência de token. |
 | Dashboard Geral do Ranking | `/ranking-condutores` | **Integrada ao `api-driver-scoring`** (4.1 a 4.8, 4.10 e 5.1 a 5.5): filtros em cascata, cards de classificação, Top 10 Referência / 10 menores pontuações, Ranking completo (Mensal/Anual), Evolução Anual, Distribuição por Departamento/Unidade/Filial, Fadiga e Volume de Eventos. |
-| Matriz de Pontuação | `/ranking-condutores/matriz-pontuacao` | **Mock** (sem endpoint no backend). Critérios, pesos e regras de cálculo do ranking. |
+| Matriz de Pontuação | `/ranking-condutores/matriz-pontuacao` | **Integrada** (`GET /dashboard/scoring-matrix`): regras por evento, classificações e fatores de km vêm da API. Regras de cálculo e periodicidade seguem como texto estático. |
 | Parâmetros do Ranking | `/ranking-condutores/dashboard-parametros` | **Integrada** (4.7, 4.8 e 4.10): eventos por nível de exposição, fadiga aguda × acumulada e volume por tipo. Cards clicáveis abrem o detalhe; botão "Ver todos os eventos" abre `all-events`. |
 | Detalhamento de Parâmetro | `/ranking-condutores/dashboard-parametros/[id]` | **Integrada** (4.9): eventos paginados de um `event_type` (ou `all-events`). Período e filtros vêm da query string, validados com Zod. |
 | Performance do Condutor | `/ranking-condutores/performance-condutores/[id]` | **Integrada** (4.12): `[id]` é o UUID. Cabeçalho, KPIs, evolução mensal e eventos paginados (com exceções sinalizadas). Aba Análise Preditiva segue mock (IRC derivado da pontuação real). |
 | Performance dos Condutores | `/ranking-condutores/performance-condutores` | **Integrada** (4.11): listagem paginada com filtros hierárquicos, exportação Excel e navegação por UUID. |
-| Gestão de Exceções | `/ranking-condutores/gestao-excecoes` | **Mock** (sem endpoint no backend). Histórico de exceções ao ranking. |
+| Condutores por Categoria | `/ranking-condutores/condutores-categoria/[categoria]` | **Integrada** (4.11 com `classification`): `[categoria]` = `todos`/`referencia`/`baixa`/`media`/`alta`. Aberta ao clicar nos cards da Visão Geral; período e filtros vêm na query string (validados com Zod). |
+| Gestão de Exceções | `/ranking-condutores/gestao-excecoes` | **Integrada** (`GET /exceptions`, `DELETE /exceptions/:id`): histórico paginado com busca por condutor e revogação. A criação acontece no detalhe do condutor. Acesso restrito a perfis de gestor (403 para os demais). |
 | Análises Preditivas | `/ranking-condutores/analises-preditivas` | **Mock** (sem endpoint no backend). IRC gauge, evolução mensal, top 10 IRC, zonas de risco, probabilidade e heatmap. |
 | Demo de Gráficos | `/ranking-condutores/demo-graficos` | Demonstração dos componentes de gráficos genéricos (Sprint Review) |
 
@@ -296,3 +308,16 @@ Integração com o backend `api-driver-scoring` (spec: `API_DRIVER_SCORING_SPEC.
 - **Listagem 4.11 considera só meses fechados**: o backend substitui um mês posterior ao último fechado pelo último fechado; a tela avisa isso quando não há dados.
 - **Filtros e período compartilhados**: `useRankingPageFilters` evita repetir o estado de período/filtros em cada página; `useResettablePage` reaproveita a regra "volta para a página 1 quando os filtros mudam".
 - **Links quebrados no mock `analises-preditivas`**: essa tela (não alterada) ainda linka para o detalhe pelo nome; como o `[id]` agora espera UUID, esses links mostram erro até a tela ser integrada.
+
+### Gestão de Exceções, Matriz e Categorias (Etapa 4)
+
+- **Fonte**: `frontend-integration-guide.md` (gerado pelo dev back-end, FLEET-2301/2303). Ele substitui a spec antiga nos pontos novos; a regra de ouro da Etapa 3 deixou de valer para `matriz-pontuacao` e `gestao-excecoes`. Só `analises-preditivas` segue mock (sem endpoint).
+- **Criação de exceção só pela rota estrita**: `POST /drivers/:driverId/events/:eventId/exceptions` com body `{ justification }`. O schema usa `z.strictObject` e os path params são UUID (`driver.id`, nunca o nome). Não existe `POST /exceptions` (removido na revisão de segurança).
+- **Permissão é do backend**: `canManageExceptions` apenas esconde/desabilita botões (UX); quem decide é o 403 do backend. A claim do JWT é lida sem validar assinatura e nunca é usada para autorizar nada.
+- **Atualização após ação**: aplicar exceção faz `refetch` do detalhe do condutor (o cache do backend já é invalidado na mesma requisição); revogar faz `refetch` da listagem (ou volta uma página se a atual ficou vazia).
+- **Impacto é sempre `event.impact`**: com exceção o backend retorna `impact: 0` e mantém `raw_points` (imutabilidade de auditoria).
+- **Erros 401 × 403 × 404 (AccessScope)**: 401 = sessão; 403 = sem acesso à filial/departamento ou perfil; 404 no detalhe do condutor = não existe ou fora do escopo. As mensagens ficam em `api-error.ts`.
+- **Modal sem nova dependência**: `ui/dialog.tsx` e `ui/textarea.tsx` seguem o padrão do `sheet.tsx` (`@base-ui/react/dialog`).
+- **Matriz com origem livre**: `EventoPontuacao.origem` passou a `string` (o backend já traduz); origens desconhecidas usam estilo neutro e vão ao final da tabela.
+- **Categoria → filtro**: os nomes das classificações são dinâmicos; `getCategoryFilter` converte o card no filtro pelo nível semântico do título (card desconhecido não fica clicável). `classification=todos` não é enviado ao backend.
+- **Pendências de alinhamento com o back-end** (não alteradas por falta de confirmação): o guia diz que `/dashboard/ranking` (4.1) aceita filtros hierárquicos, mas a spec antiga dizia que só aceita `managerId`; as cores de classificação do protótipo Lovable diferem das nossas; o guia navega por nome nos top lists, mas mantemos sempre UUID.

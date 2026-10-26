@@ -10,7 +10,8 @@ export type OrigemEvento = "Telemetria" | "Multa" | "Registro";
 
 /** Linha da tabela de pontuação por evento */
 export interface EventoPontuacao {
-  origem: OrigemEvento;
+  /** Origem do evento (ex.: `OrigemEvento`); string livre porque vem traduzida do backend. */
+  origem: string;
   evento: string;
   pontuacao: number;
 }

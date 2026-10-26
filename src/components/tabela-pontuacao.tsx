@@ -10,14 +10,16 @@
  * <TabelaPontuacao eventos={matrizPontuacao} />
  */
 
-import type { EventoPontuacao, OrigemEvento } from "@/types/matriz-pontuacao";
+import type { EventoPontuacao } from "@/types/matriz-pontuacao";
 
-/** Estilos dos badges de origem */
-const ESTILOS_ORIGEM: Record<OrigemEvento, string> = {
+/** Estilos dos badges de origem (origens desconhecidas usam o estilo neutro). */
+const ESTILOS_ORIGEM: Record<string, string> = {
   Telemetria: "bg-[hsl(var(--accent)/0.1)] text-[hsl(var(--accent))]",
   Multa: "bg-[hsl(var(--warning)/0.2)] text-[hsl(var(--warning-foreground))]",
   Registro: "bg-[hsl(var(--danger)/0.1)] text-[hsl(var(--danger))]",
 };
+
+const ESTILO_ORIGEM_PADRAO = "bg-muted text-muted-foreground";
 
 interface TabelaPontuacaoProps {
   eventos: EventoPontuacao[];
@@ -49,7 +51,7 @@ export function TabelaPontuacao({ eventos }: TabelaPontuacaoProps) {
               >
                 <td className="py-2.5 px-3">
                   <span
-                    className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium ${ESTILOS_ORIGEM[evento.origem]}`}
+                    className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium ${ESTILOS_ORIGEM[evento.origem] ?? ESTILO_ORIGEM_PADRAO}`}
                   >
                     {evento.origem}
                   </span>

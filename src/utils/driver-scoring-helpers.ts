@@ -7,7 +7,7 @@
  *   por organização, por isso o mapeamento é feito por texto normalizado.
  */
 
-import type { RankingAnnualMonthKey } from "@/types/driver-scoring";
+import type { DriverClassificationFilter, RankingAnnualMonthKey } from "@/types/driver-scoring";
 
 
 // ---------------------------------------------------------------------------
@@ -167,6 +167,20 @@ function resolveClassificationLevel(labelOrCategory: string): ClassificationLeve
  */
 export function getClassificationStyle(labelOrCategory: string): ClassificationStyle {
   return CLASSIFICATION_STYLES[resolveClassificationLevel(labelOrCategory)];
+}
+
+/**
+ * Converte um card de `GET /dashboard/driver-categories` no filtro `classification` de
+ * `GET /dashboard/driver-performance` (Tela 2 do guia).
+ * - `category === "total"` -> `todos`;
+ * - demais: nível semântico do título (os nomes das classificações são dinâmicos por organização);
+ * - texto fora do padrão -> `undefined` (o card não fica clicável).
+ */
+export function getCategoryFilter(category: string, title: string): DriverClassificationFilter | undefined {
+  if (category === "total") return "todos";
+
+  const { level } = getClassificationStyle(title);
+  return level === "desconhecida" ? undefined : level;
 }
 
 // ---------------------------------------------------------------------------

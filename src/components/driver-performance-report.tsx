@@ -22,7 +22,7 @@ import { ListSkeleton, QueryState } from "@/components/query-state";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { useResettablePage } from "@/hooks/use-resettable-page";
 import { getDriverPerformanceList } from "@/services/driver-scoring.service";
-import type { DashboardHierarchyFilters } from "@/types/driver-scoring";
+import type { DashboardHierarchyFilters, DriverClassificationFilter } from "@/types/driver-scoring";
 import { getApiErrorMessage } from "@/utils/api-error";
 import { downloadCsv } from "@/utils/csv";
 import { displayValue, formatScore } from "@/utils/driver-scoring-helpers";
@@ -47,13 +47,15 @@ interface DriverPerformanceReportProps {
   /** Mês de 1 a 12. */
   mes: number;
   filtros: DashboardHierarchyFilters;
+  /** Filtra pela classificação do mês (Tela 2 — Condutores por Categoria). Vazio/`todos` = sem filtro. */
+  classificacao?: DriverClassificationFilter;
 }
 
 /** Função estável (fora do componente), exigida pelo `useApiQuery`. */
 const fetchPerformanceList = getDriverPerformanceList;
 
-export function DriverPerformanceReport({ ano, mes, filtros }: DriverPerformanceReportProps) {
-  const [pagina, setPagina] = useResettablePage(JSON.stringify({ ano, mes, filtros }));
+export function DriverPerformanceReport({ ano, mes, filtros, classificacao }: DriverPerformanceReportProps) {
+  const [pagina, setPagina] = useResettablePage(JSON.stringify({ ano, mes, filtros, classificacao }));
   const [exportando, setExportando] = useState(false);
   const [erroExportacao, setErroExportacao] = useState<string | null>(null);
 
@@ -63,6 +65,7 @@ export function DriverPerformanceReport({ ano, mes, filtros }: DriverPerformance
     page: pagina,
     limit: ITENS_POR_PAGINA,
     ...filtros,
+    classification: classificacao,
   });
 
   /** Busca todos os registros (sem paginação) e baixa como CSV. */
@@ -70,7 +73,13 @@ export function DriverPerformanceReport({ ano, mes, filtros }: DriverPerformance
     setExportando(true);
     setErroExportacao(null);
     try {
-      const resposta = await getDriverPerformanceList({ year: ano, month: mes, ...filtros, export: true });
+      const resposta = await getDriverPerformanceList({
+        year: ano,
+        month: mes,
+        ...filtros,
+        classification: classificacao,
+        export: true,
+      });
       const linhas = resposta.items.map((item, indice) => [
         indice + 1,
         item.driver,

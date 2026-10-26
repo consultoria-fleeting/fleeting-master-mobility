@@ -144,10 +144,12 @@ export default function PerformanceCondutorPage() {
               <DriverPerformanceKpis indicators={data.indicators} />
               <DriverMonthlyScoresChart scores={data.monthly_scores} />
               <DriverEventsTable
+                driverId={data.driver.id}
                 events={data.events.data}
                 pagination={data.events.pagination}
                 carregando={isLoading}
                 onPaginaChange={setPagina}
+                onExceptionApplied={refetch}
               />
             </TabsContent>
 

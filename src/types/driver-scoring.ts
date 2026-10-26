@@ -116,11 +116,16 @@ export interface RankingParameterDetailsQueryParams extends DashboardHierarchyFi
   limit?: number;
 }
 
+/** Filtro de classificação do endpoint 4.11 (Tela 2 — Condutores por Categoria). */
+export type DriverClassificationFilter = "todos" | ClassificationKey;
+
 /**
  * `GetDriverPerformanceListDto` — endpoint 4.11. Todos opcionais.
  * O backend também aceita aliases camelCase; aqui usamos apenas snake_case.
  */
 export interface DriverPerformanceListQueryParams extends DashboardHierarchyFilters {
+  /** Filtra pela classificação do condutor no mês (`todos` equivale a não filtrar). */
+  classification?: DriverClassificationFilter;
   /** Inteiro 2000–2100. Padrão: ano corrente. */
   year?: number;
   /** Inteiro 1–12. Padrão (ou se maior): último mês fechado. */
@@ -478,6 +483,8 @@ export interface DriverEventException {
   applied_at: string | null;
 }
 
+export type DriverEventStatus = "Confirmado" | "Desconsiderado";
+
 export interface DriverEvent {
   /** `score_deductions.id` */
   id: string;
@@ -487,7 +494,7 @@ export interface DriverEvent {
   type: string;
   /** Nome PT-BR do evento. */
   label: string;
-  /** Origem armazenada (no seed: `'telemetry' | 'fine' | 'incident'`); tratar como string livre. */
+  /** Origem já traduzida pelo backend (ex.: `'Telemetria'`); tratar como string livre. */
   origin: string;
   severity: EventSeverity;
   /** Valor absoluto dos pontos da regra. */
@@ -497,6 +504,12 @@ export interface DriverEvent {
   has_exception: boolean;
   /** Preenchido só se `has_exception = true`. */
   exception: DriverEventException | null;
+  /** `Desconsiderado` quando há exceção aplicada. */
+  status: DriverEventStatus;
+  /** `true` quando é possível aplicar uma exceção a este evento. */
+  eligible: boolean;
+  /** Motivo pelo qual o evento não é elegível (`null` se elegível). */
+  ineligible_reason: string | null;
 }
 
 export interface DriverPerformanceDetailResponse {
@@ -509,6 +522,117 @@ export interface DriverPerformanceDetailResponse {
     data: DriverEvent[];
     pagination: PaginationTotalPages;
   };
+}
+
+// ---------------------------------------------------------------------------
+// Gestão de Exceções (FLEET-2301) — Tela 7 do guia
+// ---------------------------------------------------------------------------
+
+/** Query de `GET /exceptions`. */
+export interface ExceptionsQueryParams {
+  /** Busca parcial, case-insensitive, pelo nome do condutor. */
+  driverName?: string;
+  /** Padrão no backend: 1. */
+  page?: number;
+  /** Padrão no backend: 10 (máx. 100). */
+  pageSize?: number;
+}
+
+/** Item do histórico de exceções (`GET /exceptions` e `GET /exceptions/:id`). */
+export interface ExceptionItem {
+  id: string;
+  exceptionId: string;
+  eventId: string;
+  /** Código do evento (ex.: `EXCESS_SPEED_HIGH`). */
+  eventType: string;
+  /** Nome PT-BR do evento. */
+  eventLabel: string;
+  driverId: string;
+  driverName: string;
+  /** ISO 8601 */
+  eventDate: string;
+  /** ISO 8601 */
+  createdAt: string;
+  /** ISO 8601 */
+  appliedAt: string;
+  justification: string;
+  scoreBefore: number;
+  scoreAfter: number;
+  /** Nome de quem aplicou a exceção. */
+  createdBy: string;
+}
+
+export interface ExceptionsListResponse {
+  items: ExceptionItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+/** Body de `POST /drivers/:driverId/events/:eventId/exceptions` (somente `justification`). */
+export interface CreateExceptionBody {
+  /** 10 a 500 caracteres. */
+  justification: string;
+}
+
+export interface CreateExceptionResponse {
+  exceptionId: string;
+  eventId: string;
+  scoreBefore: number;
+  scoreAfter: number;
+  /** ISO 8601 */
+  createdAt: string;
+  createdBy: string;
+}
+
+export interface DeleteExceptionResponse {
+  message: string;
+  exceptionId: string;
+  eventId: string;
+  driverId: string;
+  scoreBefore: number;
+  scoreAfter: number;
+}
+
+// ---------------------------------------------------------------------------
+// Matriz de Pontuação — Tela 8 do guia (`GET /dashboard/scoring-matrix`)
+// ---------------------------------------------------------------------------
+
+export interface ScoringMatrixRule {
+  id: string;
+  /** Código do evento (ex.: `HARSH_ACCELERATION`). */
+  event_type: string;
+  label: string;
+  /** Origem já traduzida (ex.: `Telemetria`, `Multa`, `Registro`). */
+  origin: string;
+  raw_origin: string;
+  /** Pontos da regra (negativo = desconto). */
+  points: number;
+  is_critical: boolean;
+  exposure_level: ExposureLevelBucket;
+}
+
+export interface ScoringMatrixClassification {
+  classification: string;
+  subtitle: string;
+  min_score: number | null;
+  max_score: number | null;
+  is_critical_match: boolean;
+  key: ClassificationKey;
+}
+
+export interface ScoringMatrixKmFactor {
+  range: string;
+  min_km: number;
+  max_km: number | null;
+  factor: number;
+}
+
+export interface ScoringMatrixResponse {
+  rules: ScoringMatrixRule[];
+  classifications: ScoringMatrixClassification[];
+  km_factors: ScoringMatrixKmFactor[];
 }
 
 // ---------------------------------------------------------------------------
