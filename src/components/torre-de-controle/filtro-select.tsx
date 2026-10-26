@@ -1,5 +1,5 @@
 /**
- * FiltroSelect — Select compacto em formato de pílula (cabeçalho do painel).
+ * FiltroSelect — Select compacto em formato de pílula (cabeçalho da Torre de Controle).
  *
  * O valor escolhido é validado com Zod contra a lista de opções permitidas
  * antes de chamar `onChange` (evita valores manipulados no DOM).
@@ -12,7 +12,7 @@
 
 import { ChevronDown } from "lucide-react";
 import { z } from "zod";
-import type { OpcaoFiltro } from "@/types/painel-gestao";
+import type { OpcaoFiltro } from "@/types/torre-de-controle";
 
 interface FiltroSelectProps {
   id: string;

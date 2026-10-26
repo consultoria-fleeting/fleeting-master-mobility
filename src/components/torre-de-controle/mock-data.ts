@@ -1,10 +1,10 @@
 /**
- * Dados mockados do Painel de Gestão.
+ * Dados mockados da Torre de Controle.
  *
  * Fonte da verdade: `PAINEL_GESTAO_REF.md` (raiz do repositório).
  * Valores fixos (sem Math.random) para evitar hydration mismatch.
  *
- * TODO(backend): substituir estas constantes por chamadas à API do painel.
+ * TODO(backend): substituir estas constantes por chamadas à API da Torre de Controle.
  */
 
 import type {
@@ -13,10 +13,10 @@ import type {
   CondutorAtencao,
   ItemManutencao,
   ItemTco,
-  KpiGestao,
+  KpiTorre,
   OpcaoFiltro,
   VeiculoAtencao,
-} from "@/types/painel-gestao";
+} from "@/types/torre-de-controle";
 
 /* ========================================================= */
 /*  PALETA (Design Tokens da identidade Índigo)              */
@@ -50,7 +50,7 @@ export const CORES = {
 /*  KPIs                                                     */
 /* ========================================================= */
 
-export const KPIS: KpiGestao[] = [
+export const KPIS: KpiTorre[] = [
   {
     id: "veiculos-ativos",
     label: "Veículos Ativos",

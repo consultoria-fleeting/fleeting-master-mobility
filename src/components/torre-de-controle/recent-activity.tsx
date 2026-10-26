@@ -5,8 +5,8 @@
  * (placa/condutor · quando). Lista com scroll interno.
  */
 
-import type { AtividadeRecente } from "@/types/painel-gestao";
-import { PainelCard } from "./painel-card";
+import type { AtividadeRecente } from "@/types/torre-de-controle";
+import { TorreCard } from "./torre-card";
 
 interface RecentActivityProps {
   atividades: AtividadeRecente[];
@@ -15,7 +15,7 @@ interface RecentActivityProps {
 
 export function RecentActivity({ atividades, className }: RecentActivityProps) {
   return (
-    <PainelCard titulo="Atividade Recente" className={className} corpoClassName="overflow-y-auto px-4 pb-3">
+    <TorreCard titulo="Atividade Recente" className={className} rolavel corpoClassName="px-4 pb-3">
       <ol className="relative">
         {atividades.map((atividade, indice) => (
           <li
@@ -38,6 +38,6 @@ export function RecentActivity({ atividades, className }: RecentActivityProps) {
           </li>
         ))}
       </ol>
-    </PainelCard>
+    </TorreCard>
   );
 }

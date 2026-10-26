@@ -2,7 +2,7 @@
  * Motor de respostas do Assistente de IA da Frota (mock para demonstração).
  *
  * Identifica a intenção da pergunta por palavras-chave (ou placa) e monta uma
- * resposta rica a partir dos MESMOS mocks usados no painel e no mapa, para que
+ * resposta rica a partir dos MESMOS mocks usados na Torre de Controle e no mapa, para que
  * tudo seja coerente durante a apresentação.
  *
  * TODO(backend): substituir `gerarRespostaIA` por uma chamada ao endpoint de IA

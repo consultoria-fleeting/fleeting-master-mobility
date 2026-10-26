@@ -1,5 +1,5 @@
 /**
- * KpiCards — Linha com os 5 cards de KPI do topo do Painel de Gestão.
+ * KpiCards — Linha com os 5 cards de KPI do topo da Torre de Controle.
  *
  * Cada card: label em caixa alta + ícone "i" (tooltip com a composição),
  * valor em destaque, complemento opcional, badge de variação e legenda.
@@ -19,11 +19,11 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import type { KpiGestao } from "@/types/painel-gestao";
+import type { KpiTorre } from "@/types/torre-de-controle";
 
 /* ---------- Badge de variação ---------- */
 
-function DeltaBadge({ delta, bom }: Pick<KpiGestao, "delta" | "bom">) {
+function DeltaBadge({ delta, bom }: Pick<KpiTorre, "delta" | "bom">) {
   return (
     <span
       className={cn(
@@ -41,9 +41,9 @@ function DeltaBadge({ delta, bom }: Pick<KpiGestao, "delta" | "bom">) {
 /* ---------- Card individual ---------- */
 
 interface KpiCardProps {
-  kpi: KpiGestao;
+  kpi: KpiTorre;
   indice: number;
-  onAbrir: (kpi: KpiGestao) => void;
+  onAbrir: (kpi: KpiTorre) => void;
 }
 
 function KpiCard({ kpi, indice, onAbrir }: KpiCardProps) {
@@ -77,7 +77,7 @@ function KpiCard({ kpi, indice, onAbrir }: KpiCardProps) {
         <ChevronRight className="ml-auto h-3.5 w-3.5 -translate-x-1 text-[#C7D2FE] opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
       </div>
 
-      <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5">
+      <div className="mt-1 flex flex-wrap items-center gap-x-1.5">
         <span className="whitespace-nowrap text-[20px] font-bold leading-tight tracking-tight text-[#1E1B4B] 2xl:text-[23px]">{kpi.valor}</span>
         {kpi.sub && <span className="whitespace-nowrap text-[11px] font-medium text-[#94A3B8]">{kpi.sub}</span>}
         <DeltaBadge delta={kpi.delta} bom={kpi.bom} />
@@ -90,7 +90,7 @@ function KpiCard({ kpi, indice, onAbrir }: KpiCardProps) {
 
 /* ---------- Drawer de detalhamento ---------- */
 
-function KpiDrawer({ kpi, onFechar }: { kpi: KpiGestao | null; onFechar: () => void }) {
+function KpiDrawer({ kpi, onFechar }: { kpi: KpiTorre | null; onFechar: () => void }) {
   return (
     <Sheet open={kpi !== null} onOpenChange={(aberto) => !aberto && onFechar()}>
       <SheetContent side="right" className="font-poppins w-full gap-0 border-[#E7E7F0] bg-white p-0 sm:max-w-[380px]">
@@ -131,11 +131,11 @@ function KpiDrawer({ kpi, onFechar }: { kpi: KpiGestao | null; onFechar: () => v
 /* ---------- Linha de KPIs ---------- */
 
 interface KpiCardsProps {
-  kpis: KpiGestao[];
+  kpis: KpiTorre[];
 }
 
 export function KpiCards({ kpis }: KpiCardsProps) {
-  const [kpiAberto, setKpiAberto] = useState<KpiGestao | null>(null);
+  const [kpiAberto, setKpiAberto] = useState<KpiTorre | null>(null);
 
   return (
     <>

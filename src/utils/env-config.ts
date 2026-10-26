@@ -5,11 +5,11 @@
  * `master-mobility.com`, `demo.master-mobility.com` e `dev.master-mobility.com`. Por isso o
  * ambiente é decidido em tempo de execução, espelhando as variáveis do projeto legado:
  *
- * | Ambiente | Access token    | Refresh token               | Legacy token        | API Gateway                          |
- * |----------|-----------------|-----------------------------|---------------------|--------------------------------------|
- * | prod     | `token-mm`      | `refresh-token-mm`          | `legacy-token-mm`   | `https://api.master-mobility.com`      |
- * | demo     | `token-mm-demo` | `refresh-token-mm-new-demo` | `legacy-token-mm-demo` | `https://demo-api.master-mobility.com` |
- * | dev      | `token-mm-dev`  | `refresh-token-mm-dev`      | `legacy-token-mm-dev`  | `https://dev-api.master-mobility.com`  |
+ * | Ambiente | Access token    | Refresh token               | Legacy token        | API Gateway                          | Sistema legado (front)              |
+ * |----------|-----------------|-----------------------------|---------------------|--------------------------------------|-------------------------------------|
+ * | prod     | `token-mm`      | `refresh-token-mm`          | `legacy-token-mm`   | `https://api.master-mobility.com`      | `https://master-mobility.com`       |
+ * | demo     | `token-mm-demo` | `refresh-token-mm-new-demo` | `legacy-token-mm-demo` | `https://demo-api.master-mobility.com` | `https://demo.master-mobility.com`  |
+ * | dev      | `token-mm-dev`  | `refresh-token-mm-dev`      | `legacy-token-mm-dev`  | `https://dev-api.master-mobility.com`  | `https://dev.master-mobility.com`   |
  *
  * No servidor (sem `window`) sempre vale o ambiente de produção (variáveis `NEXT_PUBLIC_*`).
  */
@@ -21,6 +21,8 @@ interface EnvironmentConfig {
   refreshTokenCookie: string;
   legacyTokenCookie: string;
   apiGatewayUrl: string;
+  /** Front-end do sistema legado (destino dos links do menu e do logout) */
+  legacyAppUrl: string;
 }
 
 const ENVIRONMENTS: Record<AppEnvironment, EnvironmentConfig> = {
@@ -29,18 +31,21 @@ const ENVIRONMENTS: Record<AppEnvironment, EnvironmentConfig> = {
     refreshTokenCookie: "refresh-token-mm-dev",
     legacyTokenCookie: "legacy-token-mm-dev",
     apiGatewayUrl: "https://dev-api.master-mobility.com",
+    legacyAppUrl: "https://dev.master-mobility.com",
   },
   demo: {
     tokenCookie: "token-mm-demo",
     refreshTokenCookie: "refresh-token-mm-new-demo",
     legacyTokenCookie: "legacy-token-mm-demo",
     apiGatewayUrl: "https://demo-api.master-mobility.com",
+    legacyAppUrl: "https://demo.master-mobility.com",
   },
   prod: {
     tokenCookie: "token-mm",
     refreshTokenCookie: "refresh-token-mm",
     legacyTokenCookie: "legacy-token-mm",
     apiGatewayUrl: "https://api.master-mobility.com",
+    legacyAppUrl: "https://master-mobility.com",
   },
 };
 
@@ -109,4 +114,18 @@ export function getApiGatewayUrl(): string {
 /** baseURL do `api-driver-scoring`, que é acessado via Gateway sob o prefixo `/api-driver-scoring`. */
 export function getDriverScoringBaseUrl(): string {
   return `${getApiGatewayUrl()}/api-driver-scoring`;
+}
+
+/** URL do front-end legado de um ambiente (sem barra final). Padrão: ambiente atual. */
+export function getLegacyAppUrl(env: AppEnvironment = getEnvironment()): string {
+  return ENVIRONMENTS[env].legacyAppUrl;
+}
+
+/**
+ * Monta a URL absoluta de uma rota do sistema legado no ambiente informado.
+ * Ex.: em `dev.master-mobility.com`, `getLegacyUrl("/inventario/")` => `https://dev.master-mobility.com/inventario/`.
+ */
+export function getLegacyUrl(path: string, env: AppEnvironment = getEnvironment()): string {
+  const caminho = path.startsWith("/") ? path : `/${path}`;
+  return `${getLegacyAppUrl(env)}${caminho}`;
 }

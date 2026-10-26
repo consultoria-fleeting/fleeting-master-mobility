@@ -1,5 +1,5 @@
 /**
- * Tabelas de atenção do Painel de Gestão.
+ * Tabelas de atenção da Torre de Controle.
  *
  * - VeiculosAtencaoTabela: placa, modelo, condutor, pendência e status.
  * - CondutoresAtencaoTabela: nome, filial e status da CNH.
@@ -16,8 +16,8 @@ import type {
   StatusCnh,
   StatusPendencia,
   VeiculoAtencao,
-} from "@/types/painel-gestao";
-import { PainelCard } from "./painel-card";
+} from "@/types/torre-de-controle";
+import { TorreCard } from "./torre-card";
 import { StatusBadge, type TomStatus } from "./status-badge";
 
 const TOM_PENDENCIA: Record<StatusPendencia, TomStatus> = {
@@ -31,8 +31,9 @@ const TOM_CNH: Record<StatusCnh, TomStatus> = {
   "CNH à Vencer": "alerta",
 };
 
+/** O cabeçalho fica fixo e ganha uma sombra suave só depois que a lista é rolada */
 const CLASSE_CABECALHO =
-  "sticky top-0 z-[1] bg-white px-2 py-2 text-left text-[9.5px] font-semibold uppercase tracking-[0.07em] text-[#94A3B8] first:pl-4 last:pr-4";
+  "sticky top-0 z-[1] bg-white px-2 py-2 text-left text-[9.5px] font-semibold uppercase tracking-[0.07em] text-[#94A3B8] transition-shadow first:pl-4 last:pr-4 group-data-[rolado=true]/rolagem:shadow-[0_8px_10px_-10px_rgba(30,27,75,0.25)]";
 const CLASSE_CELULA = "px-2 py-2.5 first:pl-4 last:pr-4";
 const CLASSE_LINHA =
   "group cursor-pointer border-t border-[#F1F1F6] transition-colors hover:bg-[#F8F8FC] focus-visible:bg-[#EEF2FF] focus-visible:outline-none";
@@ -63,13 +64,13 @@ interface VeiculosAtencaoTabelaProps {
 
 export function VeiculosAtencaoTabela({ veiculos, onFocarVeiculo, className }: VeiculosAtencaoTabelaProps) {
   return (
-    <PainelCard
+    <TorreCard
       titulo="Veículos que Exigem Atenção"
       corIndicador="#E11D48"
       contador={veiculos.length}
       acao="Ver Todos"
       className={className}
-      corpoClassName="overflow-auto"
+      rolavel
     >
       <table className="w-full min-w-[460px] text-[12px]">
         <thead>
@@ -105,7 +106,7 @@ export function VeiculosAtencaoTabela({ veiculos, onFocarVeiculo, className }: V
           ))}
         </tbody>
       </table>
-    </PainelCard>
+    </TorreCard>
   );
 }
 
@@ -121,13 +122,13 @@ interface CondutoresAtencaoTabelaProps {
 
 export function CondutoresAtencaoTabela({ condutores, onFocarVeiculo, className }: CondutoresAtencaoTabelaProps) {
   return (
-    <PainelCard
+    <TorreCard
       titulo="Condutores que Exigem Atenção"
       corIndicador="#D97706"
       contador={condutores.length}
       acao="Ver Todos"
       className={className}
-      corpoClassName="overflow-auto"
+      rolavel
     >
       <table className="w-full min-w-[380px] text-[12px]">
         <thead>
@@ -157,6 +158,6 @@ export function CondutoresAtencaoTabela({ condutores, onFocarVeiculo, className 
           })}
         </tbody>
       </table>
-    </PainelCard>
+    </TorreCard>
   );
 }

@@ -6,8 +6,8 @@
  */
 
 import { cn } from "@/lib/utils";
-import type { ItemManutencao, TomManutencao } from "@/types/painel-gestao";
-import { PainelCard } from "./painel-card";
+import type { ItemManutencao, TomManutencao } from "@/types/torre-de-controle";
+import { TorreCard } from "./torre-card";
 
 const COR_TOM: Record<TomManutencao, string> = {
   perigo: "text-[#E11D48]",
@@ -22,7 +22,7 @@ interface MaintenanceSummaryProps {
 
 export function MaintenanceSummary({ itens, className }: MaintenanceSummaryProps) {
   return (
-    <PainelCard titulo="Manutenção da Frota" className={className} corpoClassName="grid grid-cols-2 gap-2 px-4 pb-3.5">
+    <TorreCard titulo="Manutenção da Frota" className={className} corpoClassName="grid grid-cols-2 gap-2 px-4 pb-3.5">
       {itens.map((item) => (
         <div
           key={item.label}
@@ -32,6 +32,6 @@ export function MaintenanceSummary({ itens, className }: MaintenanceSummaryProps
           <span className={cn("text-[18px] font-bold tabular-nums", COR_TOM[item.tom])}>{item.quantidade}</span>
         </div>
       ))}
-    </PainelCard>
+    </TorreCard>
   );
 }

@@ -2,7 +2,7 @@
  * MapFilterBar — Barra de filtros do mapa.
  *
  * Busca (placa / condutor / modelo), select de UF, chips de status e de
- * categoria e contador "N / total". No modo compacto (card do painel) mostra
+ * categoria e contador "N / total". No modo compacto (card da Torre de Controle) mostra
  * apenas busca + chips de status; no modo expandido mostra tudo.
  *
  * Entradas validadas com Zod antes de atualizar o estado.

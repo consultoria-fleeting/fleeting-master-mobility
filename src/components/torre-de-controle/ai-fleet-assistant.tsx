@@ -260,15 +260,15 @@ export function AiFleetAssistant({ onFocarVeiculo }: AiFleetAssistantProps) {
 
   return (
     <div ref={raizRef} className="relative z-30 shrink-0">
-      <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
-        {/* Barra de pergunta */}
+      <div className="flex flex-col gap-1.5">
+        {/* Barra de pergunta — destaque sutil: borda e sombra levemente índigo */}
         <form
           role="search"
           onSubmit={(e) => {
             e.preventDefault();
             perguntar(pergunta);
           }}
-          className="group relative flex items-center gap-2 rounded-[14px] border border-[#E7E7F0] bg-white py-1.5 pl-1.5 pr-1.5 shadow-sm transition-all focus-within:border-[#A5B4FC] focus-within:shadow-[0_0_0_4px_rgba(79,70,229,0.12)] lg:w-[min(560px,48%)]"
+          className="group relative flex items-center gap-2 rounded-[14px] border border-[#D9DBFB] bg-linear-to-r from-white to-[#FAFAFF] py-2 pl-2 pr-2 shadow-[0_6px_20px_-12px_rgba(79,70,229,0.35)] transition-all hover:border-[#C7D2FE] focus-within:border-[#A5B4FC] focus-within:shadow-[0_0_0_4px_rgba(79,70,229,0.12)] lg:w-[min(680px,60%)]"
         >
           <AvatarIA />
           <input
@@ -285,7 +285,7 @@ export function AiFleetAssistant({ onFocarVeiculo }: AiFleetAssistantProps) {
             placeholder="Pergunte à IA sobre sua frota… ex.: “Onde está o SVR2C84?”"
             aria-label="Pergunte ao assistente de IA da frota"
             aria-invalid={erro !== null}
-            className="min-w-0 flex-1 bg-transparent text-[12.5px] text-[#1E1B4B] placeholder:text-[#94A3B8] focus:outline-none"
+            className="min-w-0 flex-1 bg-transparent text-[13px] text-[#1E1B4B] placeholder:text-[#94A3B8] focus:outline-none"
           />
           <kbd className="hidden rounded-md border border-[#E7E7F0] bg-[#F8F8FC] px-1.5 py-0.5 text-[9.5px] font-semibold text-[#94A3B8] md:inline">
             Enter
@@ -301,21 +301,21 @@ export function AiFleetAssistant({ onFocarVeiculo }: AiFleetAssistantProps) {
           </button>
         </form>
 
-        {/* Perguntas sugeridas */}
-        <div className="flex min-w-0 items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
-          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">
-            Sugestões
-          </span>
+        {/* Perguntas sugeridas — links de texto discretos abaixo da barra */}
+        <div className="flex min-w-0 items-center gap-x-1 overflow-x-auto pl-2 text-[11px] [scrollbar-width:none]">
+          <span className="shrink-0 text-[#A3AEC2]">Experimente:</span>
           {sugestoesRapidas.map((sugestao, indice) => (
-            <button
-              key={sugestao}
-              id={`ia-sugestao-${indice}`}
-              type="button"
-              onClick={() => perguntar(sugestao)}
-              className="shrink-0 rounded-full border border-[#E0E7FF] bg-white px-3 py-1.5 text-[11px] font-medium text-[#4F46E5] transition-all hover:-translate-y-px hover:border-[#A5B4FC] hover:bg-[#EEF2FF] hover:shadow-sm"
-            >
-              {sugestao}
-            </button>
+            <span key={sugestao} className="flex shrink-0 items-center gap-x-1">
+              {indice > 0 && <span className="text-[#CBD5E1]" aria-hidden>·</span>}
+              <button
+                id={`ia-sugestao-${indice}`}
+                type="button"
+                onClick={() => perguntar(sugestao)}
+                className="rounded px-0.5 text-[#64748B] transition-colors hover:text-[#4F46E5] hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A5B4FC]"
+              >
+                {sugestao}
+              </button>
+            </span>
           ))}
         </div>
       </div>
@@ -346,7 +346,7 @@ export function AiFleetAssistant({ onFocarVeiculo }: AiFleetAssistantProps) {
             </button>
           </div>
 
-          <div className="flex max-h-[min(60vh,520px)] flex-col gap-4 overflow-y-auto p-4">
+          <div className="rolagem-suave flex max-h-[min(60vh,520px)] flex-col gap-4 overflow-y-auto p-4">
             {/* Pergunta do usuário */}
             <div className="flex justify-end">
               <p className="max-w-[80%] rounded-2xl rounded-br-md bg-[#EEF2FF] px-3.5 py-2 text-[12.5px] font-medium text-[#1E1B4B]">

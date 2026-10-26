@@ -13,7 +13,7 @@ const inter = Inter({
   display: "swap",
 });
 
-/** Fonte da nova identidade Índigo (Painel de Gestão). Aplicada via classe `.font-poppins`. */
+/** Fonte da nova identidade Índigo (Torre de Controle). Aplicada via classe `.font-poppins`. */
 const poppins = Poppins({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],

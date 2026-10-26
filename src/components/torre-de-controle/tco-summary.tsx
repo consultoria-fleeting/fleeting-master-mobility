@@ -5,7 +5,7 @@
  * custo e o breakdown (Combustível, Manutenção, Aluguel, Multas, Sinistros).
  */
 
-import type { ItemTco } from "@/types/painel-gestao";
+import type { ItemTco } from "@/types/torre-de-controle";
 import { cn } from "@/lib/utils";
 
 interface TcoSummaryProps {

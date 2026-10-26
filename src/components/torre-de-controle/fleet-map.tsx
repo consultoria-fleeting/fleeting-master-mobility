@@ -11,7 +11,7 @@
  * - Drawer de detalhe, filtros, legenda, controles e modo expandido com lista.
  *
  * IMPORTANTE (SSR): o Leaflet depende de `window`. Este componente DEVE ser
- * importado com `next/dynamic` e `{ ssr: false }` (ver `src/app/painel-de-gestao/page.tsx`).
+ * importado com `next/dynamic` e `{ ssr: false }` (ver `src/app/torre-de-controle/page.tsx`).
  */
 
 "use client";

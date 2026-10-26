@@ -119,7 +119,7 @@ export function VehicleDrawer({ veiculo, onFechar, onCentralizar }: VehicleDrawe
 
   return (
     <Sheet open={veiculo !== null} onOpenChange={(aberto) => !aberto && onFechar()}>
-      <SheetContent side="right" className="font-poppins w-full gap-0 overflow-y-auto border-[#E7E7F0] bg-white p-0 sm:max-w-[400px]">
+      <SheetContent side="right" className="font-poppins rolagem-suave w-full gap-0 overflow-y-auto border-[#E7E7F0] bg-white p-0 sm:max-w-[400px]">
         {veiculo && (
           <>
             {/* Cabeçalho */}

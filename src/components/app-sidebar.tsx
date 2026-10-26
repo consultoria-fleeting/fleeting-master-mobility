@@ -3,12 +3,13 @@
  *
  * Menu lateral com:
  * - Logo e título do sistema
- * - Links de navegação com ícones e submenus colapsáveis
+ * - Itens vindos de `src/config/menu-navegacao.ts`:
+ *   links do sistema legado (URL do ambiente atual), links internos e grupos expansíveis
  * - Estado colapsado (apenas ícones) / expandido
  * - Menu mobile com overlay
- * - Breadcrumb no header
+ * - Barra compacta no mobile (apenas botão de menu; sem breadcrumb)
  * - Indicador de página ativa
- * - Avatar do usuário no footer
+ * - Avatar do usuário e botão "Sair" no footer
  *
  * Baseado na estrutura do projeto-lovable,
  * adaptado para Next.js App Router com `usePathname`.
@@ -20,90 +21,32 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  LayoutGrid,
-  BarChart3,
-  Settings2,
-  Grid3X3,
-  ShieldAlert,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  LogOut,
   Menu,
   X,
-  ChevronDown,
-  Users,
-  Brain,
-  Home,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { LogoMenu } from "@/components/logo-menu";
+import {
+  ITENS_MENU,
+  type ItemMenuGrupo,
+  type ItemMenuLink,
+} from "@/config/menu-navegacao";
+import { useAmbiente } from "@/hooks/use-ambiente";
+import { logout } from "@/utils/auth";
+import { getLegacyUrl } from "@/utils/env-config";
 
 /* ========================================================= */
-/*  CONFIGURAÇÃO DE NAVEGAÇÃO                                */
+/*  ESTILOS COMPARTILHADOS                                   */
 /* ========================================================= */
 
-interface NavItemLink {
-  path: string;
-  label: string;
-  icon: LucideIcon;
-}
-
-interface NavItemGroup {
-  label: string;
-  icon: LucideIcon;
-  children: NavItemLink[];
-}
-
-type NavItem = NavItemLink | NavItemGroup;
-
-/** Itens de navegação — atualize quando adicionar novas páginas */
-const ITENS_NAV: NavItem[] = [
-  {
-    path: "https://master-mobility.com/painel-de-gestao/",
-    label: "Master Mobility",
-    icon: Home,
-  },
-  {
-    path: "/painel-de-gestao",
-    label: "Painel de Gestão",
-    icon: LayoutGrid,
-  },
-  {
-    path: "/ranking-condutores",
-    label: "Ranking de Condutores",
-    icon: BarChart3,
-  },
-  {
-    label: "Módulos",
-    icon: ChevronDown,
-    children: [
-      {
-        path: "/ranking-condutores/dashboard-parametros",
-        label: "Parâmetros do Ranking",
-        icon: Settings2,
-      },
-      {
-        path: "/ranking-condutores/gestao-excecoes",
-        label: "Gestão de Exceções",
-        icon: ShieldAlert,
-      },
-      {
-        path: "/ranking-condutores/performance-condutores",
-        label: "Performance dos Condutores",
-        icon: Users,
-      },
-      {
-        path: "/ranking-condutores/matriz-pontuacao",
-        label: "Matriz de Pontuação",
-        icon: Grid3X3,
-      },
-      {
-        path: "/ranking-condutores/analises-preditivas",
-        label: "Análises Preditivas",
-        icon: Brain,
-      },
-    ],
-  },
-];
+const CLASSE_ITEM_BASE = "flex items-center gap-3 rounded-lg text-sm transition-colors";
+const CLASSE_ITEM_ATIVO =
+  "bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-accent-foreground))] font-semibold";
+const CLASSE_ITEM_INATIVO =
+  "hover:bg-[hsl(var(--sidebar-accent)/0.3)] opacity-80 hover:opacity-100";
 
 /* ========================================================= */
 /*  COMPONENTE                                               */
@@ -111,43 +54,133 @@ const ITENS_NAV: NavItem[] = [
 
 export function AppSidebar({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const ambiente = useAmbiente();
   const [colapsado, setColapsado] = useState(false);
   const [mobileAberto, setMobileAberto] = useState(false);
-  const [submenuAberto, setSubmenuAberto] = useState(true);
+  /** Aberto/fechado escolhido pelo usuário. Sem escolha, o grupo abre se contiver a rota atual. */
+  const [gruposAbertos, setGruposAbertos] = useState<Record<string, boolean>>({});
 
-  /** Verifica se o path está ativo (match exato ou prefixo) */
-  function estaAtivo(path: string): boolean {
-    if (path === "/ranking-condutores") return pathname === path;
-    return pathname === path || pathname.startsWith(path + "/");
+  /** Rotas da Torre de Controle usam a nova identidade Índigo */
+  const ehTorreDeControle = pathname.startsWith("/torre-de-controle");
+  /** Rotas do Ranking de Condutores exibem a marca DriverScore no menu expandido */
+  const ehRankingCondutores = pathname.startsWith("/ranking-condutores");
+
+  /** Verifica se um link interno está ativo (match exato ou prefixo). Links do legado nunca estão ativos aqui. */
+  function estaAtivo(item: ItemMenuLink): boolean {
+    if (item.destino === "legado") return false;
+    const path = item.path.replace(/\/+$/, "");
+    const atual = pathname.replace(/\/+$/, "");
+    // O dashboard do ranking é a raiz dos módulos: só fica ativo na rota exata
+    if (path === "/ranking-condutores") return atual === path;
+    return atual === path || atual.startsWith(path + "/");
   }
 
-  /** Label da página atual para o breadcrumb */
-  function getLabelAtual(): string {
-    for (const item of ITENS_NAV) {
-      if ("path" in item && estaAtivo(item.path)) return item.label;
-      if ("children" in item) {
-        const child = item.children.find((c) => estaAtivo(c.path));
-        if (child) return child.label;
-      }
+  function grupoContemRotaAtual(grupo: ItemMenuGrupo): boolean {
+    if (grupo.prefixoAtivo && pathname.startsWith(grupo.prefixoAtivo)) return true;
+    return grupo.filhos.some(estaAtivo);
+  }
+
+  function grupoEstaAberto(grupo: ItemMenuGrupo): boolean {
+    return gruposAbertos[grupo.id] ?? grupoContemRotaAtual(grupo);
+  }
+
+  function alternarGrupo(grupo: ItemMenuGrupo) {
+    // Com o menu colapsado, clicar no ícone do grupo expande o menu já com o grupo aberto
+    if (colapsado) {
+      setColapsado(false);
+      setGruposAbertos((atual) => ({ ...atual, [grupo.id]: true }));
+      return;
     }
-    // Páginas dinâmicas
-    if (pathname.startsWith("/ranking-condutores/performance-condutores"))
-      return "Performance do Condutor";
-    if (pathname.startsWith("/ranking-condutores/dashboard-parametros"))
-      return "Detalhamento de Parâmetro";
-    return "Página";
+    setGruposAbertos((atual) => ({ ...atual, [grupo.id]: !grupoEstaAberto(grupo) }));
   }
 
-  /** Rotas do Painel de Gestão usam a nova identidade Índigo */
-  const ehPainelGestao = pathname.startsWith("/painel-de-gestao");
-  const secaoAtual = ehPainelGestao ? "Gestão de Frotas" : "Ranking de Condutores";
-  const labelAtual = getLabelAtual();
-  // Evita breadcrumb repetido (ex.: "Ranking de Condutores / Ranking de Condutores")
-  const labelBreadcrumb = labelAtual === secaoAtual ? "Dashboard" : labelAtual;
+  /** Renderiza um link (interno com next/link; legado com <a> e URL do ambiente atual) */
+  function renderizarLink(item: ItemMenuLink, subItem = false) {
+    const ativo = estaAtivo(item);
+    const Icone = item.icone;
+    const classes = `
+      ${CLASSE_ITEM_BASE} py-2.5
+      ${subItem && !colapsado ? "pl-6 pr-3" : "px-3"}
+      ${ativo ? CLASSE_ITEM_ATIVO : CLASSE_ITEM_INATIVO}
+    `;
+    const conteudo = (
+      <>
+        <Icone className={`${subItem ? "w-4 h-4" : "w-5 h-5"} shrink-0`} />
+        {!colapsado && (
+          <span className={`truncate ${subItem ? "text-[13px]" : ""}`}>{item.label}</span>
+        )}
+      </>
+    );
+
+    if (item.destino === "legado") {
+      return (
+        <a
+          key={item.path}
+          href={getLegacyUrl(item.path, ambiente)}
+          className={classes}
+          title={colapsado ? item.label : undefined}
+        >
+          {conteudo}
+        </a>
+      );
+    }
+
+    return (
+      <Link
+        key={item.path}
+        href={item.path}
+        onClick={() => setMobileAberto(false)}
+        className={classes}
+        title={colapsado ? item.label : undefined}
+        aria-current={ativo ? "page" : undefined}
+      >
+        {conteudo}
+      </Link>
+    );
+  }
+
+  /** Renderiza um grupo expansível (o título não é clicável como link, só abre/fecha) */
+  function renderizarGrupo(grupo: ItemMenuGrupo) {
+    const aberto = grupoEstaAberto(grupo);
+    const contemAtivo = grupoContemRotaAtual(grupo);
+    const Icone = grupo.icone;
+
+    return (
+      <div key={grupo.id}>
+        <button
+          type="button"
+          onClick={() => alternarGrupo(grupo)}
+          aria-expanded={aberto}
+          title={colapsado ? grupo.label : undefined}
+          className={`
+            ${CLASSE_ITEM_BASE} w-full px-3 py-2.5
+            ${contemAtivo ? "opacity-100 font-semibold" : CLASSE_ITEM_INATIVO}
+            hover:bg-[hsl(var(--sidebar-accent)/0.3)]
+          `}
+        >
+          <Icone className="w-5 h-5 shrink-0" />
+          {!colapsado && (
+            <>
+              <span className="truncate text-left flex-1">{grupo.label}</span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${aberto ? "rotate-180" : ""}`}
+              />
+            </>
+          )}
+        </button>
+
+        {aberto && !colapsado && (
+          <div className="mt-1 space-y-1">
+            {grupo.filhos.map((filho) => renderizarLink(filho, true))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div
-      className={`flex h-screen overflow-hidden ${ehPainelGestao ? "tema-indigo" : ""}`}
+      className={`flex h-screen overflow-hidden ${ehTorreDeControle ? "tema-indigo" : ""}`}
     >
       {/* Overlay mobile */}
       {mobileAberto && (
@@ -164,36 +197,25 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
           flex flex-col
           bg-[hsl(var(--sidebar-background))] text-[hsl(var(--sidebar-foreground))]
           transition-all duration-300
-          ${colapsado ? "w-[70px]" : "w-[260px]"}
+          ${colapsado ? "w-[70px]" : "w-68"}
           ${mobileAberto ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
       >
-        {/* Header do sidebar */}
+        {/* Header do sidebar: marca + botões (recolhido: ícone e seta lado a lado) */}
         <div
-          className={`flex items-center h-16 px-4 border-b border-[hsl(var(--sidebar-divider))] ${colapsado ? "justify-center" : "justify-between"
+          className={`flex h-16 shrink-0 items-center border-b border-[hsl(var(--sidebar-divider))] ${colapsado
+            ? "justify-center gap-1 px-2"
+            : "justify-between gap-2 px-4"
             }`}
         >
-          {!colapsado && (
-            <div className="flex items-center gap-2">
-              <LayoutDashboard className="w-6 h-6 text-[hsl(var(--sidebar-primary))]" />
-              <div>
-                <h1 className="text-sm font-bold leading-tight">
-                  Master Mobility
-                </h1>
-                <p className="text-[10px] opacity-60">
-                  Gestão de Frotas
-                </p>
-              </div>
-            </div>
-          )}
-          {colapsado && (
-            <LayoutDashboard className="w-6 h-6 text-[hsl(var(--sidebar-primary))]" />
-          )}
+          <div className={`flex min-w-0 items-center ${colapsado ? "shrink-0" : "flex-1"}`}>
+            <LogoMenu colapsado={colapsado} ehRankingCondutores={ehRankingCondutores} />
+          </div>
 
           {/* Botão colapsar (desktop) */}
           <button
             onClick={() => setColapsado(!colapsado)}
-            className="hidden lg:block p-1 rounded hover:bg-[hsl(var(--sidebar-accent)/0.5)] transition-colors"
+            className="hidden lg:block shrink-0 p-1 rounded hover:bg-[hsl(var(--sidebar-accent)/0.5)] transition-colors"
             aria-label={colapsado ? "Expandir menu" : "Colapsar menu"}
           >
             {colapsado ? (
@@ -206,7 +228,7 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
           {/* Botão fechar (mobile) */}
           <button
             onClick={() => setMobileAberto(false)}
-            className="lg:hidden p-1"
+            className="lg:hidden shrink-0 p-1"
             aria-label="Fechar menu"
           >
             <X className="w-5 h-5" />
@@ -214,138 +236,53 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Navegação */}
-        <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
-          {ITENS_NAV.map((item, idx) => {
-            /* --- Link direto --- */
-            if ("path" in item) {
-              const externo = item.path.startsWith("http");
-              const ativo = !externo && estaAtivo(item.path);
-
-              const classes = `
-                flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
-                ${ativo
-                  ? "bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-accent-foreground))] font-semibold"
-                  : "hover:bg-[hsl(var(--sidebar-accent)/0.3)] opacity-80 hover:opacity-100"
-                }
-              `;
-
-              if (externo) {
-                return (
-                  <a
-                    key={item.path}
-                    href={item.path}
-                    className={classes}
-                    title={colapsado ? item.label : undefined}
-                  >
-                    <item.icon className="w-5 h-5 shrink-0" />
-                    {!colapsado && (
-                      <span className="truncate">{item.label}</span>
-                    )}
-                  </a>
-                );
-              }
-
-              return (
-                <Link
-                  key={item.path}
-                  href={item.path}
-                  onClick={() => setMobileAberto(false)}
-                  className={classes}
-                  title={colapsado ? item.label : undefined}
-                >
-                  <item.icon className="w-5 h-5 shrink-0" />
-                  {!colapsado && (
-                    <span className="truncate">{item.label}</span>
-                  )}
-                </Link>
-              );
-            }
-
-            /* --- Grupo com submenu --- */
-            return (
-              <div key={idx}>
-                {!colapsado && (
-                  <button
-                    onClick={() => setSubmenuAberto(!submenuAberto)}
-                    className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-sm hover:bg-[hsl(var(--sidebar-accent)/0.3)] opacity-80 hover:opacity-100 transition-colors"
-                  >
-                    <span className="text-[10px] uppercase tracking-widest opacity-60 font-semibold">
-                      {item.label}
-                    </span>
-                    <ChevronDown
-                      className={`w-3.5 h-3.5 transition-transform duration-200 ${submenuAberto ? "rotate-180" : ""
-                        }`}
-                    />
-                  </button>
-                )}
-
-                {(submenuAberto || colapsado) &&
-                  item.children.map((child) => {
-                    const ativo = estaAtivo(child.path);
-                    return (
-                      <Link
-                        key={child.path}
-                        href={child.path}
-                        onClick={() => setMobileAberto(false)}
-                        className={`
-                          flex items-center gap-3 py-2.5 rounded-lg text-sm transition-colors
-                          ${!colapsado ? "pl-6 pr-3" : "px-3"}
-                          ${ativo
-                            ? "bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-accent-foreground))] font-semibold"
-                            : "hover:bg-[hsl(var(--sidebar-accent)/0.3)] opacity-80 hover:opacity-100"
-                          }
-                        `}
-                        title={colapsado ? child.label : undefined}
-                      >
-                        <child.icon className="w-4 h-4 shrink-0" />
-                        {!colapsado && (
-                          <span className="truncate text-[13px]">
-                            {child.label}
-                          </span>
-                        )}
-                      </Link>
-                    );
-                  })}
-              </div>
-            );
-          })}
+        <nav className="rolagem-suave flex-1 py-4 px-2 space-y-1 overflow-y-auto">
+          {ITENS_MENU.map((item) =>
+            item.tipo === "grupo" ? renderizarGrupo(item) : renderizarLink(item)
+          )}
         </nav>
 
-        {/* Footer: Usuário */}
-        {!colapsado && (
-          <div className="p-4 border-t border-[hsl(var(--sidebar-divider))]">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-[hsl(var(--sidebar-accent))] flex items-center justify-center text-xs font-bold">
+        {/* Footer: usuário + botão sair na mesma linha (recolhido: só o botão sair) */}
+        <div
+          className={`flex items-center gap-3 p-3 border-t border-[hsl(var(--sidebar-divider))] ${colapsado ? "justify-center" : ""}`}
+        >
+          {!colapsado && (
+            <div className="flex min-w-0 flex-1 items-center gap-3 px-1">
+              <div className="w-8 h-8 shrink-0 rounded-full bg-[hsl(var(--sidebar-accent))] flex items-center justify-center text-xs font-bold">
                 GF
               </div>
-              <div className="text-xs">
-                <p className="font-medium">Gestor de Frota</p>
-                <p className="opacity-60">Admin</p>
+              <div className="min-w-0 text-xs">
+                <p className="truncate font-medium">Gestor de Frota</p>
+                <p className="truncate opacity-60">Admin</p>
               </div>
             </div>
-          </div>
-        )}
+          )}
+          <button
+            id="menu-sair"
+            type="button"
+            onClick={logout}
+            title="Sair"
+            aria-label="Sair"
+            className="shrink-0 rounded-lg p-2 opacity-70 transition-colors hover:opacity-100 hover:bg-[hsl(var(--sidebar-accent)/0.4)]"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
+        </div>
       </aside>
 
       {/* ==================== CONTEÚDO PRINCIPAL ==================== */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header com breadcrumb */}
-        <header className="h-14 flex items-center px-4 lg:px-6 bg-card border-b border-border shrink-0">
+        {/* Barra compacta só no mobile: sem ela não haveria como abrir o menu */}
+        <div className="lg:hidden h-12 flex items-center gap-3 px-4 bg-card border-b border-border shrink-0">
           <button
             onClick={() => setMobileAberto(true)}
-            className="lg:hidden mr-3 p-1"
+            className="p-1"
             aria-label="Abrir menu"
           >
             <Menu className="w-5 h-5" />
           </button>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{secaoAtual}</span>
-            <span>/</span>
-            <span className="text-foreground font-medium">
-              {labelBreadcrumb}
-            </span>
-          </div>
-        </header>
+          <span className="text-sm font-semibold">Master Mobility</span>
+        </div>
 
         {/* Conteúdo da página */}
         <main className="flex-1 overflow-y-auto">{children}</main>

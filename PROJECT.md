@@ -46,7 +46,7 @@ Micro frontend que futuramente absorverá módulos do **Master Mobility** (softw
 | **DriverMonthlyScoresChart** | `src/components/driver-performance/driver-monthly-scores-chart.tsx` | Evolução mensal (12 meses) do condutor; mês sem dado (`null`) fica sem barra. |
 | **DriverEventsTable** | `src/components/driver-performance/driver-events-table.tsx` | Eventos/infrações do condutor com paginação. Sinaliza `has_exception` (evento riscado + selo "Desconsiderado" com a justificativa). |
 | **DriverPredictiveTab** | `src/components/driver-performance/driver-predictive-tab.tsx` | Aba "Análise Preditiva" (mock): IRC derivado da pontuação real e seções em desenvolvimento. |
-| **InfoTooltip** | `src/components/info-tooltip.tsx` | Ícone "i" com tooltip explicativo. Usa Tooltip do shadcn/ui. Props opcionais `iconeClassName` e `conteudoClassName` para customizar o visual (usadas no Painel de Gestão). |
+| **InfoTooltip** | `src/components/info-tooltip.tsx` | Ícone "i" com tooltip explicativo. Usa Tooltip do shadcn/ui. Props opcionais `iconeClassName` e `conteudoClassName` para customizar o visual (usadas na Torre de Controle). |
 | **RankingCondutores** | `src/components/ranking-condutores.tsx` | Tabela de ranking integrada à API (4.1) com abas Mensal/Anual, paginação sem total (`PaginacaoSimples`) e scroll lateral na aba anual (12 meses, "-" quando `null`). Props: `ano`, `mes`, `managerId`. |
 | **ScoreCircle** | `src/components/score-circle.tsx` | Indicador circular de pontuação mensal. Prop opcional `classificacao` (label da API) define a cor via `getClassificationStyle`. Usado na aba anual do ranking. |
 | **TabelaPontuacao** | `src/components/tabela-pontuacao.tsx` | Tabela de Pontuação por Evento da Matriz. Exibe Origem (badge colorido), Evento e Pontuação. Destaque em vermelho para -100 pts. |
@@ -55,17 +55,19 @@ Micro frontend que futuramente absorverá módulos do **Master Mobility** (softw
 | **PeriodicidadeSecao** | `src/components/periodicidade-secao.tsx` | Seção de periodicidade de atualização do ranking. Ícone de relógio e textos com destaques. |
 | **ParametroCard** | `src/components/parametro-card.tsx` | Card de indicador de parâmetro do ranking. Cor de fundo, ícone Lucide, label e total de eventos. Clicável com suporte a teclado. |
 | **ScrollCarousel** | `src/components/scroll-carousel.tsx` | Carrossel horizontal genérico com drag-to-scroll, setas de navegação no hover e fade visual. Reutilizável para qualquer conteúdo com scroll horizontal. |
-| **AppSidebar** | `src/components/app-sidebar.tsx` | Menu lateral de navegação com logo, links com ícones, submenus colapsáveis, estado colapsado/expandido, suporte mobile com overlay e breadcrumb dinâmico no header (seção "Gestão de Frotas" ou "Ranking de Condutores"). Aplica o tema Índigo nas rotas `/painel-de-gestao`. |
+| **AreaRolagemSuave** | `src/components/area-rolagem-suave.tsx` | Container com rolagem discreta: barra escondida até o hover (fina, índigo translúcida), degradê na base enquanto houver itens abaixo e `data-rolado` para sombra em cabeçalhos fixos. Usado pelo `TorreCard` com a prop `rolavel`. |
+| **LogoMenu** | `src/components/logo-menu.tsx` | Logo do topo do menu lateral. Regras: menu recolhido => `iconeSite.png`; menu expandido => `logo.png`; rotas `/ranking-condutores*` com menu expandido => `DriverScore_Horizontal_Negativo.svg` (cores originais). Os PNGs (azuis) ficam brancos via `brightness-0 invert`. Props: `colapsado` e `ehRankingCondutores`. |
+| **AppSidebar** | `src/components/app-sidebar.tsx` | Menu lateral de navegação com logo e itens definidos em `src/config/menu-navegacao.ts`: links do sistema legado (URL do ambiente atual via `getLegacyUrl`), links internos e grupos expansíveis não clicáveis (Ranking de Condutores, Cadastros). Botão **Sair** (só ícone, com `title`/`aria-label`) na mesma linha das informações do usuário no rodapé (`logout()`); recolhido, aparece só o ícone. Inclui estado colapsado/expandido, suporte mobile com overlay e barra compacta com botão de menu apenas no mobile (o breadcrumb do topo foi removido em todas as páginas; a navegação é feita só pelo menu). Aplica o tema Índigo nas rotas `/torre-de-controle`. |
 
-### Componentes do Painel de Gestão (`src/components/painel-gestao/`)
+### Componentes da Torre de Controle (`src/components/torre-de-controle/`)
 
-Painéis e blocos da tela `/painel-de-gestao` (identidade Índigo, fonte Poppins). Todos recebem os dados via props, então basta trocar os mocks pela API.
+Painéis e blocos da tela `/torre-de-controle` (identidade Índigo, fonte Poppins). Todos recebem os dados via props, então basta trocar os mocks pela API.
 
-- **PainelCard** (`painel-card.tsx`) — Card base do painel (título, contador opcional, ação "Ver Todos"). Reutilizado por tabelas, atividade, KM e manutenção.
+- **TorreCard** (`torre-card.tsx`) — Card base da Torre de Controle (título, contador opcional, ação "Ver Todos"). Reutilizado por tabelas, atividade, KM e manutenção. Com `rolavel`, o corpo usa o `AreaRolagemSuave`.
 - **StatusBadge** (`status-badge.tsx`) — Badge de status em caixa alta (CRÍTICO, ATENÇÃO, CNH VENCIDA…) com variantes de cor.
 - **PlacaMercosul** (`placa-mercosul.tsx`) — Placa estilizada no padrão Mercosul (faixa azul + BR). Usada no drawer e na lista de veículos.
 - **FiltroSelect** (`filtro-select.tsx`) — Select compacto do cabeçalho; valida o valor escolhido com Zod contra as opções.
-- **DashboardHeader** (`dashboard-header.tsx`) — Título "Painel de Gestão", período, selo "Dados simulados", filtros (Mês, Ano, Grupo, Locadora) e botões Cadastrar / Abrir O.S. Exporta `FiltrosPainel` e `rotuloPeriodo`.
+- **DashboardHeader** (`dashboard-header.tsx`) — Título "Torre de Controle", período, selo "Dados simulados", filtros (Mês, Ano, Grupo, Locadora) e botões Cadastrar / Abrir O.S. Exporta `FiltrosTorre` e `rotuloPeriodo`.
 - **KpiCards** (`kpi-cards.tsx`) — Linha com os 5 KPIs (Veículos, Condutores, TCO, Custo/km, Abastecimento) com tooltip, badge de variação e drawer (Sheet) de detalhamento ao clicar.
 - **VeiculosAtencaoTabela / CondutoresAtencaoTabela** (`attention-tables.tsx`) — Tabelas "que exigem atenção". Clicar numa linha foca o veículo no mapa.
 - **RecentActivity** (`recent-activity.tsx`) — Linha do tempo de atividades recentes com marcador colorido por tipo.
@@ -92,6 +94,11 @@ Painéis e blocos da tela `/painel-de-gestao` (identidade Índigo, fonte Poppins
 ### Hooks
 
 - **useEfeitoDigitacao** (`src/hooks/use-efeito-digitacao.ts`) — Revela um texto aos poucos (efeito máquina de escrever). Respeita `prefers-reduced-motion`.
+- **useAmbiente** (`src/hooks/use-ambiente.ts`) — Ambiente atual (dev/demo/prod) pelo hostname, via `useSyncExternalStore` (no servidor devolve `prod`, evitando hydration mismatch em links que dependem do ambiente).
+
+### Configuração
+
+- **ITENS_MENU** (`src/config/menu-navegacao.ts`) — Fonte única dos itens do menu lateral. Cada link tem `destino: "legado"` (sistema principal, URL por ambiente) ou `"interno"` (rota deste projeto). Grupos têm `filhos` e, opcionalmente, `prefixoAtivo`. Para adicionar uma rota ao menu, basta incluí-la aqui. A Torre de Controle fica fora do menu (acesso só pela URL).
 - **useApiQuery** (`src/hooks/use-api-query.ts`) — Busca dados de uma função de service com `data`, `isLoading`, `error` e `refetch`. Refaz a busca quando os params mudam, descarta respostas atrasadas, mantém o último dado durante recargas e deduplica requisições idênticas em andamento. Aceita `enabled`.
 - **useDebouncedValue** (`src/hooks/use-debounced-value.ts`) — Atrasa a propagação de um valor (usado no filtro de nome, 400 ms).
 - **useRankingFilterOptions** (`src/hooks/use-ranking-filter-options.ts`) — Carrega os combos em cascata (5.1 a 5.5) a partir da filial selecionada.
@@ -149,7 +156,7 @@ Componentes de gráfico reutilizáveis baseados em Recharts. Todos são genéric
 | `GrupoImpacto` | `src/types/parametro-ranking.ts` | Union type para grupos de impacto (alta, media, baixa) |
 | `ParametroRanking` | `src/types/parametro-ranking.ts` | Parâmetro/indicador do ranking (id, label, total, icone, grupo) |
 | `GrupoImpactoConfig` | `src/types/parametro-ranking.ts` | Configuração visual de um grupo de impacto (cor, label) |
-| `KpiGestao`, `VeiculoAtencao`, `CondutorAtencao`, `AtividadeRecente`, `ItemTco`, `ItemManutencao`, `BarraKm` | `src/types/painel-gestao.ts` | Tipos dos blocos do Painel de Gestão |
+| `KpiTorre`, `VeiculoAtencao`, `CondutorAtencao`, `AtividadeRecente`, `ItemTco`, `ItemManutencao`, `BarraKm` | `src/types/torre-de-controle.ts` | Tipos dos blocos da Torre de Controle |
 | `StatusVeiculo`, `CategoriaVeiculo`, `EstadoBrasil`, `VeiculoFrota`, `ItemCluster`, `FiltrosMapa`, `ComandoFocoMapa` | `src/types/frota-mapa.ts` | Contratos do mapa da frota (macro por UF, micro por veículo, filtros e comando de foco) |
 | Tipos de Request/Response do `api-driver-scoring` (ranking, categorias, distribuição, parâmetros, performance, selects) | `src/types/driver-scoring.ts` | Contrato fiel do backend de Ranking de Condutores (spec `API_DRIVER_SCORING_SPEC.md`) |
 
@@ -177,8 +184,8 @@ Integração com o backend `api-driver-scoring` (spec: `API_DRIVER_SCORING_SPEC.
 | `src/data/mock-parametros-ranking.ts` | 19 indicadores do ranking agrupados por nível de impacto + configuração de cores dos grupos. |
 | `src/data/mock-eventos-parametro.ts` | Eventos detalhados por parâmetro. Função `gerarEventosPorParametro()` com datas determinísticas. Interface `EventoDetalhe`. |
 | `src/data/mock-eventos-condutor.ts` | Eventos individuais de um condutor. Função `gerarEventosCondutor()` determinística por nome. Interface `EventoCondutor`. |
-| `src/components/painel-gestao/mock-data.ts` | Dados do Painel de Gestão (KPIs, tabelas de atenção, atividades, TCO, KM, manutenção, opções dos filtros e paleta Índigo). Fonte: `PAINEL_GESTAO_REF.md`. |
-| `src/components/painel-gestao/mapa/dados-frota.ts` | Frota simulada de 52 veículos (placas Mercosul, grupos Comgás/Vivo/Coprel), gerada de forma determinística. |
+| `src/components/torre-de-controle/mock-data.ts` | Dados da Torre de Controle (KPIs, tabelas de atenção, atividades, TCO, KM, manutenção, opções dos filtros e paleta Índigo). Fonte: `PAINEL_GESTAO_REF.md`. |
+| `src/components/torre-de-controle/mapa/dados-frota.ts` | Frota simulada de 52 veículos (placas Mercosul, grupos Comgás/Vivo/Coprel), gerada de forma determinística. |
 
 ---
 
@@ -186,7 +193,7 @@ Integração com o backend `api-driver-scoring` (spec: `API_DRIVER_SCORING_SPEC.
 
 | Página | Rota | Propósito |
 |---|---|---|
-| Painel de Gestão (protótipo) | `/painel-de-gestao` | Visão consolidada da frota: filtros, assistente de IA, 5 KPIs, veículos/condutores que exigem atenção, mapa Leaflet (Macro/Micro), atividade recente, resumo do TCO, KMs rodados e manutenção. Dados 100% mockados e sem exigência de token. |
+| Torre de Controle (protótipo) | `/torre-de-controle` | Visão consolidada da frota: filtros, assistente de IA, 5 KPIs, veículos/condutores que exigem atenção, mapa Leaflet (Macro/Micro), atividade recente, resumo do TCO, KMs rodados e manutenção. Dados 100% mockados e sem exigência de token. |
 | Dashboard Geral do Ranking | `/ranking-condutores` | **Integrada ao `api-driver-scoring`** (4.1 a 4.8, 4.10 e 5.1 a 5.5): filtros em cascata, cards de classificação, Top 10 Referência / 10 menores pontuações, Ranking completo (Mensal/Anual), Evolução Anual, Distribuição por Departamento/Unidade/Filial, Fadiga e Volume de Eventos. |
 | Matriz de Pontuação | `/ranking-condutores/matriz-pontuacao` | **Mock** (sem endpoint no backend). Critérios, pesos e regras de cálculo do ranking. |
 | Parâmetros do Ranking | `/ranking-condutores/dashboard-parametros` | **Integrada** (4.7, 4.8 e 4.10): eventos por nível de exposição, fadiga aguda × acumulada e volume por tipo. Cards clicáveis abrem o detalhe; botão "Ver todos os eventos" abre `all-events`. |
@@ -224,8 +231,10 @@ Integração com o backend `api-driver-scoring` (spec: `API_DRIVER_SCORING_SPEC.
 9. **Multi-Zone com o legado (`front-master-mobility`)**: Este projeto roda sob o mesmo domínio via Rewrite da Vercel. Todas as páginas ficam em `src/app/ranking-condutores/` para casar com a URL `/ranking-condutores`. O `assetPrefix: "/fleeting-static"` (em `next.config.ts`) evita conflito de chunks `/_next/static` com o legado.
 
 10. **Autenticação compartilhada com o legado**: Cookies e `localStorage` já são compartilhados no navegador. Arquivos:
-    - `src/utils/tokens.ts` — `getTokens`, `setTokens`, `resetTokens` (cookies via `js-cookie`).
-    - `src/utils/auth.ts` — `redirectToLogin` (hard navigation, pois `/login` é do legado) e `getCurrentUser`.
+    - `src/utils/tokens.ts` — `getTokens`, `setTokens`, `resetTokens` (cookies via `js-cookie`). `resetTokens` limpa localStorage, sessionStorage e os cookies de token em todas as variantes de domínio (sem domain, host atual, `master-mobility.com` e `.master-mobility.com`), pois o js-cookie só remove com o mesmo `domain` da gravação.
+    - `src/utils/auth.ts` — `logout()` (botão Sair): `resetTokens()` + `window.location.replace` para `/login/` do legado no ambiente atual.
+    - `src/utils/env-config.ts` — além dos tokens e do Gateway, define a URL do front legado por ambiente (`getLegacyAppUrl`, `getLegacyUrl(path)`): `dev.master-mobility.com`, `demo.master-mobility.com` e `master-mobility.com`. Em `localhost` vale `dev`.
+    - `src/utils/auth.ts` — `redirectToLogin` (sessão expirada; hard navigation para o `/login/` do legado no ambiente atual via `getLegacyUrl`, mantendo `callbackUrl`) e `getCurrentUser`.
     - `src/services/api.ts` — instância Axios com token no header e refresh automático em 401 (Promise Lock para evitar refresh simultâneo; falha => `resetTokens` + `redirectToLogin`). Resposta do refresh validada com Zod.
     - Variáveis de ambiente documentadas em `.env.example`.
     - `src/utils/env-config.ts` — **ambiente dinâmico (dev × demo × prod) pelo hostname**: o deploy é único (variáveis de produção) e atende `master-mobility.com`, `demo.master-mobility.com` e `dev.master-mobility.com` via Rewrite. Espelha as variáveis reais do legado:
@@ -235,20 +244,24 @@ Integração com o backend `api-driver-scoring` (spec: `API_DRIVER_SCORING_SPEC.
       - Exporta `getEnvironment`, `getTokenCookieName`, `getRefreshTokenCookieName`, `getApiGatewayUrl`, `getDriverScoringBaseUrl` e as listas `ACCESS_TOKEN_COOKIES`, `REFRESH_TOKEN_COOKIES`, `LEGACY_TOKEN_COOKIES`. Os Request Interceptors de `api` e `driverScoringApi` recalculam o `baseURL` a cada requisição (o valor do `axios.create` é só inicial). No servidor (sem `window`) vale sempre prod.
     - `getTokens` faz fallback (dev -> demo -> prod) **dentro do mesmo tipo de token**: access só busca access e refresh só busca refresh. `resetTokens` limpa access, refresh e legacy de todos os ambientes.
 
-### Painel de Gestão
+11. **Logos do menu via import estático**: o `LogoMenu` importa as imagens de `public/` (`import logo from "../../public/logo.png"`) em vez de usar `"/logo.png"`. No Multi-Zone, um caminho absoluto de `public/` seria resolvido pelo legado; o import estático gera a URL com o `assetPrefix` (`/fleeting-static`). Usa `unoptimized` para não depender do `/_next/image`. A cor branca vem de filtro CSS, sem arquivos extras. Menu expandido com `w-68` (272px) para a logo caber; no menu recolhido (`70px`) o ícone fica menor (`w-6`) para caber ao lado da seta de expandir, na mesma linha.
+
+### Torre de Controle
 
 - **Leaflet imperativo (sem react-leaflet)**: o mapa é criado com `useRef` + `L.map()`. Dá controle total de marcadores, animações e camadas, e evita conflito de peerDependencies do react-leaflet com o React 19.
 - **SSR desligado só para o mapa**: o Leaflet acessa `window` ao ser importado. A página (Client Component) importa o `FleetMap` com `next/dynamic` e `{ ssr: false }`, mostrando o `FleetMapSkeleton` enquanto carrega (no Next 16, `ssr: false` só é permitido em Client Components).
-- **Metadata em layout de servidor**: como a `page.tsx` é Client Component, o `title`/`description` ficam em `src/app/painel-de-gestao/layout.tsx`.
+- **Metadata em layout de servidor**: como a `page.tsx` é Client Component, o `title`/`description` ficam em `src/app/torre-de-controle/layout.tsx`.
 - **Fonte única de dados do mapa**: bolhas por UF, clusters, lista lateral e KPI "Veículos ativos" (52) derivam do mesmo array, então os números sempre batem.
 - **GeoJSON das UFs embutido**: malha do IBGE simplificada (~88 KB), importada dinamicamente apenas pelo chunk do mapa.
 - **DOM seguro nos marcadores**: os `divIcon` são montados com `createElement`/`textContent`, sem `innerHTML`, para evitar XSS quando os dados vierem da API.
 - **`isolate` no container do mapa**: os panes do Leaflet usam z-index altos (400+). O `isolation: isolate` cria um novo contexto de empilhamento para o mapa não sobrepor drawers, tooltips e o painel da IA.
-- **Tema Índigo escopado**: a classe `.tema-indigo` (em `globals.css`) sobrescreve as variáveis da sidebar apenas em `/painel-de-gestao`. Para torná-lo global, basta mover os valores para `:root`.
+- **Tema Índigo escopado**: a classe `.tema-indigo` (em `globals.css`) sobrescreve as variáveis da sidebar apenas em `/torre-de-controle`. Para torná-lo global, basta mover os valores para `:root`.
 - **Poppins via `next/font`**: carregada em `src/app/layout.tsx` como variável `--font-poppins` e aplicada com a classe `.font-poppins` (drawers e popovers renderizam em portal, por isso também recebem a classe).
 - **Tiles do OpenStreetMap apenas para demo**: em produção, trocar por um provedor com SLA/chave (a política de uso do OSM não permite tráfego intenso).
 - **Correção no shadcn**: o `sheet.tsx` gerado vinha com `import { cn } from "cn"`; foi corrigido para `@/lib/utils`.
-- **Rota fora de `/ranking-condutores`**: o painel funciona direto na URL da Vercel. No domínio principal (Multi-Zone), `/painel-de-gestao` hoje pertence ao legado. Será preciso um rewrite específico (ou mover a rota) antes de publicar ali.
+- **Rolagem discreta em vez da barra nativa**: listas com scroll (tabelas de atenção, atividade, painel da IA, drawer) usam a classe `.rolagem-suave` (barra invisível até o hover) e, nos cards, o `AreaRolagemSuave` (degradê na base + sombra no cabeçalho ao rolar). Mantém a rolagem nativa (roda, trackpad, toque, teclado). "Arrastar para rolar" com o mouse foi descartado: conflita com o clique na linha (focar no mapa) e não é um padrão esperado no desktop.
+- **Rota `/torre-de-controle`**: a tela se chamava "Painel de Gestão" (`/painel-de-gestao`) e foi renomeada. A rota só existe neste projeto (funciona direto na URL da Vercel); para publicá-la no domínio principal (Multi-Zone) será preciso adicionar o rewrite de `/torre-de-controle` no legado. Pastas e símbolos internos também foram renomeados (`components/torre-de-controle/`, `TorreCard`, `types/torre-de-controle.ts`, `KpiTorre`, `FiltrosTorre`).
+- **Menu aponta para o legado por ambiente**: os links do menu usam URL absoluta do ambiente em que o usuário está (mesma detecção por hostname dos tokens), então funcionam também em `localhost` e na URL da Vercel deste projeto. Como as URLs dependem de `window`, o ambiente é lido pelo `useAmbiente` para não quebrar a hidratação.
 
 ### Integração com `api-driver-scoring`
 

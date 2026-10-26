@@ -36,15 +36,39 @@ export function setTokens(access_token: string, refresh_token: string) {
   Cookies.set(getRefreshTokenCookieName(), refresh_token, { expires: 30, path: "/" });
 }
 
-/** Limpa o localStorage e todos os cookies de autenticação (access, refresh e legacy de todos os ambientes). */
+/**
+ * Domínios em que um cookie pode ter sido gravado. O js-cookie só remove um cookie
+ * quando o `domain` informado é o mesmo da gravação, então tentamos todas as variantes:
+ * sem domain (host atual), o próprio host e o domínio raiz (ex.: `.master-mobility.com`).
+ */
+function getDominiosDosCookies(): (string | undefined)[] {
+  const { hostname } = window.location;
+  const partes = hostname.split(".");
+  // localhost ou IP: não existe domínio raiz
+  if (partes.length < 2 || /^\d+(\.\d+){3}$/.test(hostname)) return [undefined];
+
+  const dominioRaiz = partes.slice(-2).join(".");
+  return [undefined, hostname, dominioRaiz, `.${dominioRaiz}`];
+}
+
+/**
+ * Limpa localStorage, sessionStorage e todos os cookies de autenticação
+ * (access, refresh e legacy de todos os ambientes), em todas as variantes de domínio.
+ */
 export function resetTokens() {
   localStorage.clear();
+  sessionStorage.clear();
 
-  [
+  const nomes = new Set([
     ...ACCESS_TOKEN_COOKIES,
     ...REFRESH_TOKEN_COOKIES,
     ...LEGACY_TOKEN_COOKIES,
     getTokenCookieName(),
     getRefreshTokenCookieName(),
-  ].forEach((name) => Cookies.remove(name, { path: "/" }));
+  ]);
+  const dominios = getDominiosDosCookies();
+
+  nomes.forEach((nome) => {
+    dominios.forEach((domain) => Cookies.remove(nome, { path: "/", domain }));
+  });
 }

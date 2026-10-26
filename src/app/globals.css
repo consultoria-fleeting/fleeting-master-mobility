@@ -66,7 +66,7 @@
 
 /*
  * Tema Índigo (nova identidade) — aplicado à sidebar somente nas rotas do
- * Painel de Gestão. Para torná-lo global, basta mover estes valores para :root.
+ * Torre de Controle. Para torná-lo global, basta mover estes valores para :root.
  */
 .tema-indigo {
   --sidebar-background: 244 47% 20%; /* #1E1B4B */
@@ -152,6 +152,37 @@ h6 {
 /* Fonte da identidade Índigo (variável carregada em src/app/layout.tsx) */
 .font-poppins {
   font-family: var(--font-poppins), "Poppins", system-ui, -apple-system, sans-serif;
+}
+
+/*
+ * Rolagem discreta — barra invisível até o hover (usada pelo AreaRolagemSuave,
+ * mas pode ser aplicada em qualquer elemento com overflow).
+ * Firefox/Chrome 121+ usam scrollbar-color; Safari usa os pseudo-elementos -webkit.
+ */
+.rolagem-suave {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.rolagem-suave:hover,
+.rolagem-suave:focus-within {
+  scrollbar-color: rgb(79 70 229 / 0.25) transparent;
+}
+.rolagem-suave::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.rolagem-suave::-webkit-scrollbar-track {
+  background: transparent;
+}
+.rolagem-suave::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 9999px;
+}
+.rolagem-suave:hover::-webkit-scrollbar-thumb {
+  background: rgb(79 70 229 / 0.25);
+}
+.rolagem-suave::-webkit-scrollbar-thumb:hover {
+  background: rgb(79 70 229 / 0.45);
 }
 
 /* Barras do gráfico "KMs Rodados" crescendo a partir da base */

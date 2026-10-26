@@ -6,8 +6,8 @@
  * e tooltip com o valor no hover. As barras "crescem" ao montar.
  */
 
-import type { BarraKm } from "@/types/painel-gestao";
-import { PainelCard } from "./painel-card";
+import type { BarraKm } from "@/types/torre-de-controle";
+import { TorreCard } from "./torre-card";
 
 interface KmChartProps {
   barras: BarraKm[];
@@ -22,7 +22,7 @@ export function KmChart({ barras, ano, totalKm, className }: KmChartProps) {
   const maximo = Math.max(...barras.map((b) => b.km));
 
   return (
-    <PainelCard
+    <TorreCard
       titulo="KMs Rodados"
       className={className}
       corpoClassName="flex flex-col px-4 pb-2.5"
@@ -60,6 +60,6 @@ export function KmChart({ barras, ano, totalKm, className }: KmChartProps) {
           </span>
         ))}
       </div>
-    </PainelCard>
+    </TorreCard>
   );
 }

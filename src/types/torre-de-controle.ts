@@ -1,7 +1,7 @@
 /**
- * Tipos do Painel de Gestão (visão consolidada da frota).
+ * Tipos da Torre de Controle (visão consolidada da frota).
  *
- * Os dados hoje vêm de mocks (`src/components/painel-gestao/mock-data.ts`).
+ * Os dados hoje vêm de mocks (`src/components/torre-de-controle/mock-data.ts`).
  * Quando o backend for integrado, as respostas da API devem seguir estes contratos.
  */
 
@@ -11,8 +11,8 @@ export interface DetalheKpi {
   valor: string;
 }
 
-/** Card de KPI do topo do painel */
-export interface KpiGestao {
+/** Card de KPI do topo da Torre de Controle */
+export interface KpiTorre {
   id: string;
   label: string;
   valor: string;

@@ -1,5 +1,5 @@
 /**
- * DashboardHeader — Cabeçalho do Painel de Gestão.
+ * DashboardHeader — Cabeçalho da Torre de Controle.
  *
  * Título + subtítulo com o período, selo "Dados simulados", filtros
  * (mês, ano, grupo, locadora) e ações "+ Cadastrar" / "Abrir O.S.".
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { FiltroSelect } from "./filtro-select";
 import { OPCOES_ANO, OPCOES_GRUPO, OPCOES_LOCADORA, OPCOES_MES } from "./mock-data";
 
-export interface FiltrosPainel {
+export interface FiltrosTorre {
   mes: string;
   ano: string;
   grupo: string;
@@ -20,25 +20,25 @@ export interface FiltrosPainel {
 }
 
 interface DashboardHeaderProps {
-  filtros: FiltrosPainel;
-  onFiltrosChange: (filtros: FiltrosPainel) => void;
+  filtros: FiltrosTorre;
+  onFiltrosChange: (filtros: FiltrosTorre) => void;
 }
 
 /** "Mês Atual · 2026" ou "Julho · 2026" */
-export function rotuloPeriodo({ mes, ano }: FiltrosPainel): string {
+export function rotuloPeriodo({ mes, ano }: FiltrosTorre): string {
   const opcao = OPCOES_MES.find((o) => o.valor === mes);
   return `${opcao?.label ?? "Mês Atual"} · ${ano}`;
 }
 
 export function DashboardHeader({ filtros, onFiltrosChange }: DashboardHeaderProps) {
-  function alterar<K extends keyof FiltrosPainel>(campo: K, valor: FiltrosPainel[K]) {
+  function alterar<K extends keyof FiltrosTorre>(campo: K, valor: FiltrosTorre[K]) {
     onFiltrosChange({ ...filtros, [campo]: valor });
   }
 
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-2.5">
       <div className="mr-1.5">
-        <h1 className="m-0 text-[19px] font-semibold tracking-[-0.01em] text-[#1E1B4B]">Painel de Gestão</h1>
+        <h1 className="m-0 text-[19px] font-semibold tracking-[-0.01em] text-[#1E1B4B]">Torre de Controle</h1>
         <p className="text-[11.5px] text-[#94A3B8]">Visão consolidada · {rotuloPeriodo(filtros)}</p>
       </div>
       <span className="rounded-full border border-[#E7E7F0] bg-white px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.06em] text-[#94A3B8]">

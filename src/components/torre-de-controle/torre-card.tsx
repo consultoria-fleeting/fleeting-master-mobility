@@ -1,19 +1,21 @@
 /**
- * PainelCard — Card base do Painel de Gestão (identidade Índigo).
+ * TorreCard — Card base da Torre de Controle (identidade Índigo).
  *
  * Cabeçalho com indicador colorido opcional, título, contador e ação
  * ("Ver Todos" ou conteúdo à direita). O corpo ocupa o restante da altura,
  * permitindo listas com scroll interno.
  *
  * @example
- * <PainelCard titulo="Veículos que Exigem Atenção" contador={7} corIndicador="#E11D48" acao="Ver Todos">
+ * <TorreCard titulo="Veículos que Exigem Atenção" contador={7} corIndicador="#E11D48" acao="Ver Todos">
  *   ...
- * </PainelCard>
+ * </TorreCard>
+ * Com `rolavel`, o corpo usa o AreaRolagemSuave (barra discreta + degradê).
  */
 
+import { AreaRolagemSuave } from "@/components/area-rolagem-suave";
 import { cn } from "@/lib/utils";
 
-interface PainelCardProps {
+interface TorreCardProps {
   titulo: string;
   /** Bolinha colorida antes do título */
   corIndicador?: string;
@@ -26,10 +28,12 @@ interface PainelCardProps {
   extraCabecalho?: React.ReactNode;
   className?: string;
   corpoClassName?: string;
+  /** Corpo com rolagem discreta (AreaRolagemSuave). `corpoClassName` vai para a área que rola. */
+  rolavel?: boolean;
   children: React.ReactNode;
 }
 
-export function PainelCard({
+export function TorreCard({
   titulo,
   corIndicador,
   contador,
@@ -38,8 +42,9 @@ export function PainelCard({
   extraCabecalho,
   className,
   corpoClassName,
+  rolavel = false,
   children,
-}: PainelCardProps) {
+}: TorreCardProps) {
   return (
     <section
       className={cn(
@@ -75,7 +80,11 @@ export function PainelCard({
             </button>
           ))}
       </header>
-      <div className={cn("min-h-0 flex-1", corpoClassName)}>{children}</div>
+      {rolavel ? (
+        <AreaRolagemSuave conteudoClassName={corpoClassName}>{children}</AreaRolagemSuave>
+      ) : (
+        <div className={cn("min-h-0 flex-1", corpoClassName)}>{children}</div>
+      )}
     </section>
   );
 }

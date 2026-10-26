@@ -39,7 +39,7 @@ export function FleetListSidebar({ veiculos, selecionadoId, onSelecionar, modoMa
         </span>
       </div>
 
-      <ul className="flex-1 overflow-y-auto">
+      <ul className="rolagem-suave flex-1 overflow-y-auto">
         {ordenados.length === 0 && (
           <li className="px-4 py-8 text-center text-[11.5px] leading-relaxed text-[#94A3B8]">
             {modoMacro

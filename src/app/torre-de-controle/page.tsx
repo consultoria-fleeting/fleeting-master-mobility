@@ -1,5 +1,5 @@
 /**
- * Painel de Gestão — Página principal (protótipo de validação).
+ * Torre de Controle — Página principal (protótipo de validação).
  *
  * Visão consolidada da frota seguindo `PAINEL_GESTAO_REF.md` e `MAPA_LEAFLET_SPEC.md`:
  * - Cabeçalho com filtros e ações
@@ -18,21 +18,21 @@
 import { useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { ComandoFocoMapa } from "@/types/frota-mapa";
-import { AiFleetAssistant } from "@/components/painel-gestao/ai-fleet-assistant";
+import { AiFleetAssistant } from "@/components/torre-de-controle/ai-fleet-assistant";
 import {
   CondutoresAtencaoTabela,
   VeiculosAtencaoTabela,
-} from "@/components/painel-gestao/attention-tables";
+} from "@/components/torre-de-controle/attention-tables";
 import {
   DashboardHeader,
-  type FiltrosPainel,
-} from "@/components/painel-gestao/dashboard-header";
-import { FleetMapSkeleton } from "@/components/painel-gestao/fleet-map-skeleton";
-import { KmChart } from "@/components/painel-gestao/km-chart";
-import { KpiCards } from "@/components/painel-gestao/kpi-cards";
-import { MaintenanceSummary } from "@/components/painel-gestao/maintenance-summary";
-import { RecentActivity } from "@/components/painel-gestao/recent-activity";
-import { TcoSummary } from "@/components/painel-gestao/tco-summary";
+  type FiltrosTorre,
+} from "@/components/torre-de-controle/dashboard-header";
+import { FleetMapSkeleton } from "@/components/torre-de-controle/fleet-map-skeleton";
+import { KmChart } from "@/components/torre-de-controle/km-chart";
+import { KpiCards } from "@/components/torre-de-controle/kpi-cards";
+import { MaintenanceSummary } from "@/components/torre-de-controle/maintenance-summary";
+import { RecentActivity } from "@/components/torre-de-controle/recent-activity";
+import { TcoSummary } from "@/components/torre-de-controle/tco-summary";
 import {
   ATIVIDADES,
   BARRAS_KM,
@@ -42,26 +42,26 @@ import {
   TCO_RESUMO,
   TOTAL_KM_ANO,
   VEICULOS_ATENCAO,
-} from "@/components/painel-gestao/mock-data";
+} from "@/components/torre-de-controle/mock-data";
 
 /**
  * O Leaflet acessa `window` ao ser importado, então o mapa é carregado
  * somente no navegador (`ssr: false`), com um skeleton do mesmo tamanho.
  */
 const FleetMap = dynamic(
-  () => import("@/components/painel-gestao/fleet-map").then((modulo) => modulo.FleetMap),
+  () => import("@/components/torre-de-controle/fleet-map").then((modulo) => modulo.FleetMap),
   { ssr: false, loading: () => <FleetMapSkeleton /> }
 );
 
-const FILTROS_INICIAIS: FiltrosPainel = {
+const FILTROS_INICIAIS: FiltrosTorre = {
   mes: "atual",
   ano: "2026",
   grupo: "todos",
   locadora: "todas",
 };
 
-export default function PainelDeGestaoPage() {
-  const [filtros, setFiltros] = useState<FiltrosPainel>(FILTROS_INICIAIS);
+export default function TorreDeControlePage() {
+  const [filtros, setFiltros] = useState<FiltrosTorre>(FILTROS_INICIAIS);
   const [comandoFoco, setComandoFoco] = useState<ComandoFocoMapa | null>(null);
   const areaMapaRef = useRef<HTMLDivElement>(null);
 
