@@ -159,7 +159,7 @@ Componentes de gráfico reutilizáveis baseados em Recharts. Todos são genéric
 
 Integração com o backend `api-driver-scoring` (spec: `API_DRIVER_SCORING_SPEC.md`).
 
-- **`driverScoringApi`** (`src/services/api.ts`) — Instância Axios com baseURL `NEXT_PUBLIC_API_DRIVER_SCORING` (fallback `https://api-driver-scoring.master-mobility.com`). Usa os mesmos interceptors da `api` (token Bearer + refresh em 401 com Promise Lock).
+- **`driverScoringApi`** (`src/services/api.ts`) — Instância Axios com baseURL `${NEXT_PUBLIC_API_GATEWAY}/api-driver-scoring` (barra final da variável removida; fallback do gateway `https://api.master-mobility.com`). Usa os mesmos interceptors da `api` (token Bearer + refresh em 401 com Promise Lock).
 - **`driver-scoring.service.ts`** (`src/services/`) — Funções dos 12 endpoints do dashboard (`getRanking`, `getDriverCategories`, `getDriversDistribution`, `getAnnualClassificationEvolution`, `getTopReferenceDrivers`, `getBottomScoringDrivers`, `getRankingParameters`, `getEventsVolume`, `getRankingParameterDetails`, `getFatigueDistribution`, `getDriverPerformanceList`, `getDriverPerformanceDetail`) e dos 5 selects (`getCompanyOptions`, `getUnitOptions`, `getDepartmentOptions`, `getCostCenterOptions`, `getManagerOptions`).
 - **`schemas/driver-scoring.ts`** (`src/schemas/`) — Schemas Zod de cada rota. Validam e fazem whitelist dos query params (chaves fora da matriz da seção 3 da spec são descartadas).
 - **`sanitizeParams`** (`src/utils/sanitize-params.ts`) — Remove chaves `undefined`, `null` e `""` antes do envio.
@@ -246,7 +246,7 @@ Integração com o backend `api-driver-scoring` (spec: `API_DRIVER_SCORING_SPEC.
 
 ### Integração com `api-driver-scoring`
 
-- **Backend com baseURL própria**: o Ranking não passa pelo Gateway; já o `/auth/refresh` continua em `NEXT_PUBLIC_API_GATEWAY`. Por isso `api.ts` expõe `api` e `driverScoringApi`, ambas com `applyAuthInterceptors` e um único `renewingPromise` (nunca há dois refreshes simultâneos).
+- **Backend acessado via API Gateway**: o Ranking passa pelo Gateway sob o prefixo `/api-driver-scoring` (`${NEXT_PUBLIC_API_GATEWAY}/api-driver-scoring/dashboard/ranking`); não há variável de ambiente própria. O `/auth/refresh` continua na instância `api` (`${NEXT_PUBLIC_API_GATEWAY}/auth/refresh`, sem o prefixo). Por isso `api.ts` expõe `api` e `driverScoringApi`, ambas com `applyAuthInterceptors` e um único `renewingPromise` (nunca há dois refreshes simultâneos).
 - **Sanitizar antes de validar**: o `ValidationPipe` do backend usa `forbidNonWhitelisted: true` (query desconhecida => 400) e UUID vazio quebra. Fluxo de cada chamada: `sanitizeParams` -> Zod (whitelist + faixas) -> `sanitizeParams` -> Axios.
 - **`/dashboard/ranking` é especial**: aceita só `period, year, month, page, limit, managerId, export`. `month` é obrigatório no mensal (senão 500 no backend) e removido no anual. `manager_id` é convertido para `managerId`.
 - **Selects dependentes**: `department`, `costcenter` e `manager` retornam `[]` sem `company_id`; o service nem faz a requisição (economiza rate limit de 20 req/s).

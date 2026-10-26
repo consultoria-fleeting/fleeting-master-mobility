@@ -6,8 +6,15 @@ import { getTokens, resetTokens, setTokens } from "@/utils/tokens";
 const TOKEN_NAME = process.env.NEXT_PUBLIC_TOKEN_NAME!;
 const REFRESH_TOKEN_NAME = process.env.NEXT_PUBLIC_REFRESH_TOKEN_NAME!;
 
-/** URL de produção do backend `api-driver-scoring`, usada se a env não estiver definida. */
-const DRIVER_SCORING_FALLBACK_URL = "https://api-driver-scoring.master-mobility.com";
+/**
+ * Todas as chamadas do `api-driver-scoring` passam pelo API Gateway, sob o prefixo `/api-driver-scoring`.
+ * A barra final da variável é removida antes de concatenar o prefixo.
+ */
+const gatewayUrl = (process.env.NEXT_PUBLIC_API_GATEWAY || "https://api.master-mobility.com").replace(
+  /\/+$/,
+  "",
+);
+const driverScoringBaseUrl = `${gatewayUrl}/api-driver-scoring`;
 
 /**
  * Contrato da resposta de /auth/refresh.
@@ -25,9 +32,9 @@ export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_GATEWAY,
 });
 
-/** Backend do Ranking de Condutores (`api-driver-scoring`), com baseURL própria. */
+/** Backend do Ranking de Condutores (`api-driver-scoring`), acessado via Gateway em `/api-driver-scoring`. */
 export const driverScoringApi = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_DRIVER_SCORING || DRIVER_SCORING_FALLBACK_URL,
+  baseURL: driverScoringBaseUrl,
 });
 
 // Evita várias chamadas de refresh simultâneas (Promise Lock).
