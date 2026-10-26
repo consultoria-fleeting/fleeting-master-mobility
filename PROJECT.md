@@ -228,6 +228,12 @@ Integração com o backend `api-driver-scoring` (spec: `API_DRIVER_SCORING_SPEC.
     - `src/utils/auth.ts` — `redirectToLogin` (hard navigation, pois `/login` é do legado) e `getCurrentUser`.
     - `src/services/api.ts` — instância Axios com token no header e refresh automático em 401 (Promise Lock para evitar refresh simultâneo; falha => `resetTokens` + `redirectToLogin`). Resposta do refresh validada com Zod.
     - Variáveis de ambiente documentadas em `.env.example`.
+    - `src/utils/env-config.ts` — **ambiente dinâmico (dev × demo × prod) pelo hostname**: o deploy é único (variáveis de produção) e atende `master-mobility.com`, `demo.master-mobility.com` e `dev.master-mobility.com` via Rewrite. Espelha as variáveis reais do legado:
+      - **dev** (`dev.*`, `*-dev*` ou `localhost`): `token-mm-dev`, `refresh-token-mm-dev`, `https://dev-api.master-mobility.com`.
+      - **demo** (`demo.*` ou `*-demo*`): `token-mm-demo`, `refresh-token-mm-new-demo`, `https://demo-api.master-mobility.com`.
+      - **prod** (padrão): `NEXT_PUBLIC_*` com fallback `token-mm`, `refresh-token-mm`, `https://api.master-mobility.com`.
+      - Exporta `getEnvironment`, `getTokenCookieName`, `getRefreshTokenCookieName`, `getApiGatewayUrl`, `getDriverScoringBaseUrl` e as listas `ACCESS_TOKEN_COOKIES`, `REFRESH_TOKEN_COOKIES`, `LEGACY_TOKEN_COOKIES`. Os Request Interceptors de `api` e `driverScoringApi` recalculam o `baseURL` a cada requisição (o valor do `axios.create` é só inicial). No servidor (sem `window`) vale sempre prod.
+    - `getTokens` faz fallback (dev -> demo -> prod) **dentro do mesmo tipo de token**: access só busca access e refresh só busca refresh. `resetTokens` limpa access, refresh e legacy de todos os ambientes.
 
 ### Painel de Gestão
 

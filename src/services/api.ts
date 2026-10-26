@@ -1,20 +1,13 @@
 import axios, { type AxiosInstance, type AxiosResponse } from "axios";
 import { z } from "zod";
 import { redirectToLogin } from "@/utils/auth";
+import {
+  getApiGatewayUrl,
+  getDriverScoringBaseUrl,
+  getRefreshTokenCookieName,
+  getTokenCookieName,
+} from "@/utils/env-config";
 import { getTokens, resetTokens, setTokens } from "@/utils/tokens";
-
-const TOKEN_NAME = process.env.NEXT_PUBLIC_TOKEN_NAME!;
-const REFRESH_TOKEN_NAME = process.env.NEXT_PUBLIC_REFRESH_TOKEN_NAME!;
-
-/**
- * Todas as chamadas do `api-driver-scoring` passam pelo API Gateway, sob o prefixo `/api-driver-scoring`.
- * A barra final da variável é removida antes de concatenar o prefixo.
- */
-const gatewayUrl = (process.env.NEXT_PUBLIC_API_GATEWAY || "https://api.master-mobility.com").replace(
-  /\/+$/,
-  "",
-);
-const driverScoringBaseUrl = `${gatewayUrl}/api-driver-scoring`;
 
 /**
  * Contrato da resposta de /auth/refresh.
@@ -27,14 +20,21 @@ const refreshResponseSchema = z.object({
   user: z.unknown().optional().nullable(),
 });
 
-/** Gateway principal (auth, cadastros etc.). Hospeda também o `/auth/refresh`. */
+/**
+ * Gateway principal (auth, cadastros etc.). Hospeda também o `/auth/refresh`.
+ * O `baseURL` daqui é só o valor inicial: o Request Interceptor o recalcula a cada requisição
+ * conforme o hostname (dev × prod).
+ */
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_GATEWAY,
+  baseURL: getApiGatewayUrl(),
 });
 
-/** Backend do Ranking de Condutores (`api-driver-scoring`), acessado via Gateway em `/api-driver-scoring`. */
+/**
+ * Backend do Ranking de Condutores (`api-driver-scoring`), acessado via Gateway em `/api-driver-scoring`.
+ * Assim como na `api`, o `baseURL` é recalculado a cada requisição.
+ */
 export const driverScoringApi = axios.create({
-  baseURL: driverScoringBaseUrl,
+  baseURL: getDriverScoringBaseUrl(),
 });
 
 // Evita várias chamadas de refresh simultâneas (Promise Lock).
@@ -42,20 +42,23 @@ export const driverScoringApi = axios.create({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let renewingPromise: Promise<any> | null = null;
 
-/** O refresh sempre é feito no Gateway (`NEXT_PUBLIC_API_GATEWAY`), nunca no driver-scoring. */
+/** O refresh sempre é feito no Gateway do ambiente atual (`/auth/refresh`), nunca no driver-scoring. */
 function renewAccessToken() {
-  const refresh_token = getTokens(REFRESH_TOKEN_NAME);
-  return api.post("/auth/refresh", { refresh_token });
+  const refresh_token = getTokens(getRefreshTokenCookieName());
+  return api.post(`${getApiGatewayUrl()}/auth/refresh`, { refresh_token });
 }
 
 /**
  * Aplica à instância informada:
- * - Request: injeta `Authorization: Bearer <token>`.
+ * - Request: define o `baseURL` do ambiente atual (via `getBaseUrl`) e injeta `Authorization: Bearer <token>`.
  * - Response: em 401, renova o token (com lock) e repete a requisição original.
  */
-function applyAuthInterceptors(instance: AxiosInstance) {
+function applyAuthInterceptors(instance: AxiosInstance, getBaseUrl: () => string) {
   instance.interceptors.request.use((config) => {
-    const token = getTokens(TOKEN_NAME) ?? localStorage.getItem(TOKEN_NAME);
+    config.baseURL = getBaseUrl();
+
+    const tokenName = getTokenCookieName();
+    const token = getTokens(tokenName) ?? localStorage.getItem(tokenName);
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -101,5 +104,5 @@ function applyAuthInterceptors(instance: AxiosInstance) {
   );
 }
 
-applyAuthInterceptors(api);
-applyAuthInterceptors(driverScoringApi);
+applyAuthInterceptors(api, getApiGatewayUrl);
+applyAuthInterceptors(driverScoringApi, getDriverScoringBaseUrl);
