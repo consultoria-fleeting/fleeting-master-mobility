@@ -72,10 +72,16 @@ Painéis e blocos da tela `/torre-de-controle` (identidade Índigo, fonte Poppin
 - **PlacaMercosul** (`placa-mercosul.tsx`) — Placa estilizada no padrão Mercosul (faixa azul + BR). Usada no drawer e na lista de veículos.
 - **FiltroSelect** (`filtro-select.tsx`) — Select compacto do cabeçalho; valida o valor escolhido com Zod contra as opções.
 - **DashboardHeader** (`dashboard-header.tsx`) — Título "Torre de Controle", período, selo "Dados simulados", filtros (Mês, Ano, Grupo, Locadora) e botões Cadastrar / Abrir O.S. Exporta `FiltrosTorre` e `rotuloPeriodo`.
-- **KpiCards** (`kpi-cards.tsx`) — Linha com os 5 KPIs (Veículos, Condutores, TCO, Custo/km, Abastecimento) com tooltip, badge de variação e drawer (Sheet) de detalhamento ao clicar.
+- **KpiCards** (`kpi-cards.tsx`) — Linha com os 5 KPIs (Veículos, Condutores, TCO, Custo/km, Abastecimento) com tooltip, badge de variação e drawer (Sheet) de detalhamento ao clicar. Prop opcional `conteudosPersonalizados` (`{ [idDoKpi]: ReactNode }`) troca a lista padrão do drawer por um conteúdo rico e alarga o drawer para 640px (usado no TCO).
+- **DeltaBadge** (`delta-badge.tsx`) — Selo de variação (verde/vermelho/cinza). Exporta `variacaoDeCusto(percentual)`, que converte a variação de um custo nas props do selo (custo subindo = vermelho). Usado nos KPIs e no drawer do TCO.
+- **SegmentedControl** (`segmented-control.tsx`) — Alternador em "pílula" com opções exclusivas (genérico, acessível com `radiogroup`). Valida o valor com Zod. Usado nos filtros do gráfico do TCO.
+- **tco/TcoDetalhe** (`tco/tco-detalhe.tsx`) — Conteúdo do drawer "TCO do Mês": junta a evolução mensal e a composição; clicar em um mês do gráfico troca o mês da composição.
+- **tco/TcoEvolucao** (`tco/tco-evolucao.tsx`) — Seção "Evolução do TCO" com filtros (6/12 meses, Composição/Tendência, chips de categoria) e resumo do período (média, maior, menor e variação).
+- **tco/TcoEvolucaoChart** (`tco/tco-evolucao-chart.tsx`) — Gráfico Recharts do custo mês a mês: barras empilhadas por categoria ou área do total, linha de média, mês selecionado em destaque e tooltip escuro com o detalhamento.
+- **tco/TcoComposicao** (`tco/tco-composicao.tsx`) — Composição do TCO de um mês (substitui o antigo card "Resumo do TCO"): total, média por veículo, variação vs. mês anterior, barra empilhada e detalhamento por categoria (valor, % e variação).
+- **tco/tco-utils.ts** — Funções puras do TCO: `formatarMoedaCompacta`, `formatarMoeda`, `formatarEixoMil`, `formatarPercentual`, `totalDoMes`, `variacaoPercentual`.
 - **VeiculosAtencaoTabela / CondutoresAtencaoTabela** (`attention-tables.tsx`) — Tabelas "que exigem atenção". Clicar numa linha foca o veículo no mapa.
 - **RecentActivity** (`recent-activity.tsx`) — Linha do tempo de atividades recentes com marcador colorido por tipo.
-- **TcoSummary** (`tco-summary.tsx`) — Card escuro "Resumo do TCO" com barra empilhada e breakdown de custos. Usa container query para se adaptar a colunas estreitas.
 - **KmChart** (`km-chart.tsx`) — Barras mensais de KM rodados em CSS puro (sem Recharts), com destaque dourado no mês de pico.
 - **MaintenanceSummary** (`maintenance-summary.tsx`) — Grade 2×2 de manutenção (Rev. vencidas, a vencer, em oficina, sinistros).
 - **AiFleetAssistant** (`ai-fleet-assistant.tsx`) — Barra de pergunta à IA com chips de sugestões, estado "Analisando dados da frota...", resposta com efeito de digitação, mini-cards de métricas e botões "Focar … no mapa". Pergunta validada com Zod.
@@ -164,7 +170,7 @@ Componentes de gráfico reutilizáveis baseados em Recharts. Todos são genéric
 | `GrupoImpacto` | `src/types/parametro-ranking.ts` | Union type para grupos de impacto (alta, media, baixa) |
 | `ParametroRanking` | `src/types/parametro-ranking.ts` | Parâmetro/indicador do ranking (id, label, total, icone, grupo) |
 | `GrupoImpactoConfig` | `src/types/parametro-ranking.ts` | Configuração visual de um grupo de impacto (cor, label) |
-| `KpiTorre`, `VeiculoAtencao`, `CondutorAtencao`, `AtividadeRecente`, `ItemTco`, `ItemManutencao`, `BarraKm` | `src/types/torre-de-controle.ts` | Tipos dos blocos da Torre de Controle |
+| `KpiTorre`, `VeiculoAtencao`, `CondutorAtencao`, `AtividadeRecente`, `CategoriaTco`, `CategoriaTcoId`, `MesTco`, `ItemManutencao`, `BarraKm` | `src/types/torre-de-controle.ts` | Tipos dos blocos da Torre de Controle |
 | `StatusVeiculo`, `CategoriaVeiculo`, `EstadoBrasil`, `VeiculoFrota`, `ItemCluster`, `FiltrosMapa`, `ComandoFocoMapa` | `src/types/frota-mapa.ts` | Contratos do mapa da frota (macro por UF, micro por veículo, filtros e comando de foco) |
 | Tipos de Request/Response do `api-driver-scoring` (ranking, categorias, distribuição, parâmetros, performance, selects) | `src/types/driver-scoring.ts` | Contrato fiel do backend de Ranking de Condutores (spec `API_DRIVER_SCORING_SPEC.md`) |
 | `ExceptionItem`, `ExceptionsListResponse`, `ExceptionsQueryParams`, `CreateExceptionBody/Response`, `DeleteExceptionResponse` | `src/types/driver-scoring.ts` | Contrato da Gestão de Exceções (`frontend-integration-guide.md`, FLEET-2301) |
@@ -195,7 +201,7 @@ Integração com o backend `api-driver-scoring` (spec: `API_DRIVER_SCORING_SPEC.
 | `src/data/mock-parametros-ranking.ts` | 19 indicadores do ranking agrupados por nível de impacto + configuração de cores dos grupos. |
 | `src/data/mock-eventos-parametro.ts` | Eventos detalhados por parâmetro. Função `gerarEventosPorParametro()` com datas determinísticas. Interface `EventoDetalhe`. |
 | `src/data/mock-eventos-condutor.ts` | Eventos individuais de um condutor. Função `gerarEventosCondutor()` determinística por nome. Interface `EventoCondutor`. |
-| `src/components/torre-de-controle/mock-data.ts` | Dados da Torre de Controle (KPIs, tabelas de atenção, atividades, TCO, KM, manutenção, opções dos filtros e paleta Índigo). Fonte: `PAINEL_GESTAO_REF.md`. |
+| `src/components/torre-de-controle/mock-data.ts` | Dados da Torre de Controle (KPIs, tabelas de atenção, atividades, TCO (`CATEGORIAS_TCO` + `HISTORICO_TCO` com 12 meses), KM, manutenção, opções dos filtros e paleta Índigo). Fonte: `PAINEL_GESTAO_REF.md`. |
 | `src/components/torre-de-controle/mapa/dados-frota.ts` | Frota simulada de 52 veículos (placas Mercosul, grupos Comgás/Vivo/Coprel), gerada de forma determinística. |
 
 ---
@@ -204,7 +210,7 @@ Integração com o backend `api-driver-scoring` (spec: `API_DRIVER_SCORING_SPEC.
 
 | Página | Rota | Propósito |
 |---|---|---|
-| Torre de Controle (protótipo) | `/torre-de-controle` | Visão consolidada da frota: filtros, assistente de IA, 5 KPIs, veículos/condutores que exigem atenção, mapa Leaflet (Macro/Micro), atividade recente, resumo do TCO, KMs rodados e manutenção. Dados 100% mockados e sem exigência de token. |
+| Torre de Controle (protótipo) | `/torre-de-controle` | Visão consolidada da frota: filtros, assistente de IA, 5 KPIs, veículos/condutores que exigem atenção, mapa Leaflet (Macro/Micro), atividade recente, KMs rodados e manutenção. O KPI "TCO do Mês" abre um drawer com a evolução mensal do custo da frota (gráfico com filtros) e a composição do mês. Dados 100% mockados e sem exigência de token. |
 | Dashboard Geral do Ranking | `/ranking-condutores` | **Integrada ao `api-driver-scoring`** (4.1 a 4.8, 4.10 e 5.1 a 5.5): filtros em cascata, cards de classificação, Top 10 Referência / 10 menores pontuações, Ranking completo (Mensal/Anual), Evolução Anual, Distribuição por Departamento/Unidade/Filial, Fadiga e Volume de Eventos. |
 | Matriz de Pontuação | `/ranking-condutores/matriz-pontuacao` | **Integrada** (`GET /dashboard/scoring-matrix`): regras por evento, classificações e fatores de km vêm da API. Regras de cálculo e periodicidade seguem como texto estático. |
 | Parâmetros do Ranking | `/ranking-condutores/dashboard-parametros` | **Integrada** (4.7, 4.8 e 4.10): eventos por nível de exposição, fadiga aguda × acumulada e volume por tipo. Cards clicáveis abrem o detalhe; botão "Ver todos os eventos" abre `all-events`. |
@@ -273,6 +279,12 @@ Integração com o backend `api-driver-scoring` (spec: `API_DRIVER_SCORING_SPEC.
 - **Correção no shadcn**: o `sheet.tsx` gerado vinha com `import { cn } from "cn"`; foi corrigido para `@/lib/utils`.
 - **Rolagem discreta em vez da barra nativa**: listas com scroll (tabelas de atenção, atividade, painel da IA, drawer) usam a classe `.rolagem-suave` (barra invisível até o hover) e, nos cards, o `AreaRolagemSuave` (degradê na base + sombra no cabeçalho ao rolar). Mantém a rolagem nativa (roda, trackpad, toque, teclado). "Arrastar para rolar" com o mouse foi descartado: conflita com o clique na linha (focar no mapa) e não é um padrão esperado no desktop.
 - **Rota `/torre-de-controle`**: a tela se chamava "Painel de Gestão" (`/painel-de-gestao`) e foi renomeada. A rota só existe neste projeto (funciona direto na URL da Vercel); para publicá-la no domínio principal (Multi-Zone) será preciso adicionar o rewrite de `/torre-de-controle` no legado. Pastas e símbolos internos também foram renomeados (`components/torre-de-controle/`, `TorreCard`, `types/torre-de-controle.ts`, `KpiTorre`, `FiltrosTorre`).
+- **"Resumo do TCO" movido para o drawer do KPI**: o card escuro da grade foi removido e o conteúdo foi para o drawer "TCO do Mês" (`TcoDetalhe`), junto do gráfico de evolução mensal. O mapa passou a ocupar as colunas 2–4 da grade (ganhou a coluna liberada) e a Atividade Recente foi para a coluna 5.
+- **Drawer de KPI extensível**: em vez de um drawer só para o TCO, o `KpiCards` aceita `conteudosPersonalizados` por `id`. Cabeçalho, tooltip e rodapé continuam iguais para todos os KPIs; basta passar um componente para enriquecer outro KPI no futuro. O KPI fica guardado ao fechar para o conteúdo não sumir durante a animação de saída.
+- **Fonte única do TCO**: drawer, composição e respostas da IA (`ai-respostas.ts`) derivam de `HISTORICO_TCO`. A média por veículo passou a ser calculada (total ÷ veículos ativos do mês = 52), por isso mudou de R$ 1.748 para R$ 1.681.
+- **Gráfico do TCO com Recharts**: diferente do `KmChart` (CSS puro), o TCO precisa de barras empilhadas, área, linha de média e tooltip rico; o Recharts já era dependência do projeto. A legenda da média fica fora do SVG para não sobrepor as barras. Na visão "Tendência", o eixo Y começa em 80% do menor valor para evidenciar a variação (na visão "Composição", começa em 0).
+- **Barras empilhadas sempre montadas**: o Recharts empilha as `<Bar>` na ordem em que são registradas; desmontar/remontar uma categoria pelos chips a jogava para o topo da pilha (ordem invertida e cantos arredondados no lugar errado). Por isso todas as barras ficam montadas, a categoria desligada vira valor 0 e um `shape` próprio (`SegmentoBarra`) arredonda só o segmento do topo de cada coluna (última categoria ativa com valor > 0).
+- **Paleta do TCO para fundo claro**: as cores antigas (#E0E7FF etc.) foram pensadas para o card escuro e sumiam no branco. Agora: Combustível #312E81, Manutenção #6366F1, Aluguel #A5B4FC, Multas #D4AB00 (ouro) e Sinistros #E11D48.
 - **Menu aponta para o legado por ambiente**: os links do menu usam URL absoluta do ambiente em que o usuário está (mesma detecção por hostname dos tokens), então funcionam também em `localhost` e na URL da Vercel deste projeto. Como as URLs dependem de `window`, o ambiente é lido pelo `useAmbiente` para não quebrar a hidratação.
 
 ### Integração com `api-driver-scoring`

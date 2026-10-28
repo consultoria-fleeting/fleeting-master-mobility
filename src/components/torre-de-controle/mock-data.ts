@@ -10,10 +10,11 @@
 import type {
   AtividadeRecente,
   BarraKm,
+  CategoriaTco,
   CondutorAtencao,
   ItemManutencao,
-  ItemTco,
   KpiTorre,
+  MesTco,
   OpcaoFiltro,
   VeiculoAtencao,
 } from "@/types/torre-de-controle";
@@ -180,23 +181,56 @@ export const MANUTENCAO: ItemManutencao[] = [
   { label: "Sinistros", quantidade: 2, tom: "perigo" },
 ];
 
-export const TCO_RESUMO = {
-  total: "R$ 87,4 mil",
-  mediaPorVeiculo: "R$ 1.748",
-  itens: [
-    { label: "Combustível", valor: 52100, cor: "#818CF8" },
-    { label: "Manutenção", valor: 18600, cor: "#A5B4FC" },
-    { label: "Aluguel", valor: 8300, cor: "#E0E7FF" },
-    { label: "Multas", valor: 4200, cor: "#D4AB00" },
-    { label: "Sinistros", valor: 4200, cor: "#E11D48" },
-  ] satisfies ItemTco[],
-};
-
 const MESES_COMPLETOS = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
 
+/* ---------- TCO (drawer "TCO do Mês") ---------- */
+
+/** Categorias do TCO, na ordem de empilhamento do gráfico (base → topo) */
+export const CATEGORIAS_TCO: CategoriaTco[] = [
+  { id: "combustivel", label: "Combustível", cor: "#312E81" },
+  { id: "manutencao", label: "Manutenção", cor: "#6366F1" },
+  { id: "aluguel", label: "Aluguel", cor: "#A5B4FC" },
+  { id: "multas", label: "Multas", cor: "#D4AB00" },
+  { id: "sinistros", label: "Sinistros", cor: "#E11D48" },
+];
+
+/** Monta um mês do histórico a partir da chave "AAAA-MM" */
+function criarMesTco(chave: string, veiculos: number, custos: MesTco["custos"]): MesTco {
+  const [ano, mes] = chave.split("-");
+  const nomeMes = MESES_COMPLETOS[Number(mes) - 1];
+  return {
+    chave,
+    ano,
+    mes: nomeMes.slice(0, 3),
+    mesCompleto: `${nomeMes}/${ano}`,
+    veiculos,
+    custos,
+  };
+}
+
+/**
+ * Histórico dos últimos 12 meses (o último item é o mês atual).
+ * Outubro/2026 = R$ 87,4 mil e Setembro/2026 = R$ 84,9 mil, batendo com o KPI "TCO do Mês".
+ */
+export const HISTORICO_TCO: MesTco[] = [
+  criarMesTco("2025-11", 48, { combustivel: 46800, manutencao: 15200, aluguel: 8100, multas: 3600, sinistros: 0 }),
+  criarMesTco("2025-12", 48, { combustivel: 48200, manutencao: 17900, aluguel: 8100, multas: 5100, sinistros: 6200 }),
+  criarMesTco("2026-01", 49, { combustivel: 47100, manutencao: 16400, aluguel: 8100, multas: 4300, sinistros: 1800 }),
+  criarMesTco("2026-02", 49, { combustivel: 45900, manutencao: 14800, aluguel: 8100, multas: 2900, sinistros: 0 }),
+  criarMesTco("2026-03", 50, { combustivel: 49300, manutencao: 15600, aluguel: 8100, multas: 3800, sinistros: 2400 }),
+  criarMesTco("2026-04", 50, { combustivel: 48700, manutencao: 19800, aluguel: 8300, multas: 4600, sinistros: 0 }),
+  criarMesTco("2026-05", 50, { combustivel: 50400, manutencao: 16900, aluguel: 8300, multas: 3300, sinistros: 3900 }),
+  criarMesTco("2026-06", 51, { combustivel: 51200, manutencao: 17300, aluguel: 8300, multas: 5400, sinistros: 1200 }),
+  criarMesTco("2026-07", 51, { combustivel: 53800, manutencao: 18200, aluguel: 8300, multas: 4800, sinistros: 7600 }),
+  criarMesTco("2026-08", 52, { combustivel: 51900, manutencao: 16700, aluguel: 8300, multas: 3900, sinistros: 2100 }),
+  criarMesTco("2026-09", 52, { combustivel: 50600, manutencao: 18100, aluguel: 8300, multas: 4500, sinistros: 3400 }),
+  criarMesTco("2026-10", 52, { combustivel: 52100, manutencao: 18600, aluguel: 8300, multas: 4200, sinistros: 4200 }),
+];
+
+/* ---------- KMs rodados ---------- */
 /** Alturas relativas da referência; Julho (índice 6) é o mês em destaque */
 const ALTURAS_KM = [46, 38, 58, 52, 64, 70, 88, 61, 55, 66, 49, 57];
 export const TOTAL_KM_ANO = 41280;

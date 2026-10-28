@@ -4,8 +4,8 @@
  * Visão consolidada da frota seguindo `PAINEL_GESTAO_REF.md` e `MAPA_LEAFLET_SPEC.md`:
  * - Cabeçalho com filtros e ações
  * - Assistente de IA da frota (perguntas sugeridas + respostas demonstrativas)
- * - 5 KPIs com tooltip e drawer de detalhamento
- * - Grade principal: tabelas de atenção | mapa Leaflet | atividade | TCO
+ * - 5 KPIs com tooltip e drawer de detalhamento (o do TCO traz composição + evolução mensal)
+ * - Grade principal: tabelas de atenção | mapa Leaflet | atividade
  *   e, na segunda linha, KMs rodados | manutenção
  *
  * Todos os dados são mockados e a página NÃO exige token (demo pública na Vercel).
@@ -32,14 +32,15 @@ import { KmChart } from "@/components/torre-de-controle/km-chart";
 import { KpiCards } from "@/components/torre-de-controle/kpi-cards";
 import { MaintenanceSummary } from "@/components/torre-de-controle/maintenance-summary";
 import { RecentActivity } from "@/components/torre-de-controle/recent-activity";
-import { TcoSummary } from "@/components/torre-de-controle/tco-summary";
+import { TcoDetalhe } from "@/components/torre-de-controle/tco/tco-detalhe";
 import {
   ATIVIDADES,
   BARRAS_KM,
+  CATEGORIAS_TCO,
   CONDUTORES_ATENCAO,
+  HISTORICO_TCO,
   KPIS,
   MANUTENCAO,
-  TCO_RESUMO,
   TOTAL_KM_ANO,
   VEICULOS_ATENCAO,
 } from "@/components/torre-de-controle/mock-data";
@@ -77,10 +78,16 @@ export default function TorreDeControlePage() {
 
       <AiFleetAssistant onFocarVeiculo={focarVeiculoNoMapa} />
 
-      <KpiCards kpis={KPIS} />
+      <KpiCards
+        kpis={KPIS}
+        conteudosPersonalizados={{
+          // O antigo card "Resumo do TCO" agora vive no drawer do KPI, junto do gráfico mensal
+          tco: <TcoDetalhe historico={HISTORICO_TCO} categorias={CATEGORIAS_TCO} />,
+        }}
+      />
 
       {/* Grade principal: 5 colunas × 2 linhas no desktop (xl) */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:min-h-[620px] xl:flex-1 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.5fr)_minmax(0,0.5fr)_minmax(184px,0.52fr)_minmax(184px,0.46fr)] xl:grid-rows-[minmax(0,1fr)_156px]">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:min-h-[620px] xl:flex-1 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.5fr)_minmax(0,0.5fr)_minmax(184px,0.46fr)_minmax(184px,0.52fr)] xl:grid-rows-[minmax(0,1fr)_156px]">
         {/* Coluna 1 (linhas 1 e 2): tabelas de atenção */}
         <div className="flex min-h-0 flex-col gap-3 md:col-span-2 xl:col-span-1 xl:row-span-2">
           <VeiculosAtencaoTabela
@@ -95,21 +102,13 @@ export default function TorreDeControlePage() {
           />
         </div>
 
-        {/* Colunas 2–3 (linha 1): mapa da frota */}
-        <div ref={areaMapaRef} className="h-[480px] scroll-mt-4 md:col-span-2 xl:col-span-2 xl:h-auto xl:min-h-0">
+        {/* Colunas 2–4 (linha 1): mapa da frota (ganhou a coluna do antigo "Resumo do TCO") */}
+        <div ref={areaMapaRef} className="h-[480px] scroll-mt-4 md:col-span-2 xl:col-span-3 xl:h-auto xl:min-h-0">
           <FleetMap comandoFoco={comandoFoco} />
         </div>
 
-        {/* Coluna 4 (linha 1): atividade recente */}
-        <RecentActivity atividades={ATIVIDADES} className="h-[360px] xl:h-auto" />
-
-        {/* Coluna 5 (linha 1): resumo do TCO */}
-        <TcoSummary
-          total={TCO_RESUMO.total}
-          mediaPorVeiculo={TCO_RESUMO.mediaPorVeiculo}
-          itens={TCO_RESUMO.itens}
-          className="h-[360px] xl:h-auto"
-        />
+        {/* Coluna 5 (linha 1): atividade recente */}
+        <RecentActivity atividades={ATIVIDADES} className="h-[360px] md:col-span-2 xl:col-span-1 xl:h-auto" />
 
         {/* Colunas 2–3 (linha 2): KMs rodados */}
         <KmChart barras={BARRAS_KM} ano={filtros.ano} totalKm={TOTAL_KM_ANO} className="h-[156px] xl:col-span-2 xl:h-auto" />

@@ -10,13 +10,28 @@
  */
 
 import {
+  CATEGORIAS_TCO,
   CONDUTORES_ATENCAO,
+  HISTORICO_TCO,
   MANUTENCAO,
-  TCO_RESUMO,
   VEICULOS_ATENCAO,
 } from "./mock-data";
 import { STATUS_CONFIG } from "./mapa/config";
 import { obterResumoFrota, obterVeiculoPorPlaca } from "./mapa/dados-frota";
+import { formatarMoeda, formatarMoedaCompacta, totalDoMes } from "./tco/tco-utils";
+
+/** TCO do mês atual e do anterior, a partir do mesmo histórico usado no drawer "TCO do Mês" */
+function obterResumoTco() {
+  const ids = CATEGORIAS_TCO.map((categoria) => categoria.id);
+  const mesAtual = HISTORICO_TCO[HISTORICO_TCO.length - 1];
+  const mesAnterior = HISTORICO_TCO[HISTORICO_TCO.length - 2];
+  return {
+    mesAtual,
+    total: totalDoMes(mesAtual, ids),
+    totalAnterior: totalDoMes(mesAnterior, ids),
+    itens: CATEGORIAS_TCO.map((categoria) => ({ label: categoria.label, valor: mesAtual.custos[categoria.id] })),
+  };
+}
 
 /* ========================================================= */
 /*  CONTRATO                                                 */
@@ -147,8 +162,8 @@ function respostaAlertas(): RespostaIA {
 
 function respostaManutencao(): RespostaIA {
   const { emManutencao } = obterResumoFrota();
-  const custoManutencao = TCO_RESUMO.itens.find((i) => i.label === "Manutenção")?.valor ?? 0;
-  const totalTco = TCO_RESUMO.itens.reduce((soma, i) => soma + i.valor, 0);
+  const { mesAtual, total: totalTco } = obterResumoTco();
+  const custoManutencao = mesAtual.custos.manutencao;
   const percentual = Math.round((custoManutencao / totalTco) * 100);
   const porLabel = Object.fromEntries(MANUTENCAO.map((m) => [m.label, m.quantidade]));
 
@@ -196,19 +211,21 @@ function respostaConsumo(): RespostaIA {
 }
 
 function respostaTco(): RespostaIA {
-  const [maior] = [...TCO_RESUMO.itens].sort((a, b) => b.valor - a.valor);
-  const totalTco = TCO_RESUMO.itens.reduce((soma, i) => soma + i.valor, 0);
+  const { mesAtual, total: totalTco, totalAnterior, itens } = obterResumoTco();
+  const [maior] = [...itens].sort((a, b) => b.valor - a.valor);
+  const variacao = Math.round(((totalTco - totalAnterior) / totalAnterior) * 100);
+  const mediaPorVeiculo = formatarMoeda(totalTco / mesAtual.veiculos);
 
   return {
-    texto: `O TCO do mês está em ${TCO_RESUMO.total}, alta de 3% sobre o mês anterior (R$ 84,9 mil). ${maior.label} é o maior componente, com ${Math.round((maior.valor / totalTco) * 100)}% do total. A boa notícia: o custo por km caiu 6%, para R$ 2,38, indicando melhor aproveitamento da frota. A média por veículo é de ${TCO_RESUMO.mediaPorVeiculo}.`,
+    texto: `O TCO do mês está em ${formatarMoedaCompacta(totalTco)}, alta de ${variacao}% sobre o mês anterior (${formatarMoedaCompacta(totalAnterior)}). ${maior.label} é o maior componente, com ${Math.round((maior.valor / totalTco) * 100)}% do total. A boa notícia: o custo por km caiu 6%, para R$ 2,38, indicando melhor aproveitamento da frota. A média por veículo é de ${mediaPorVeiculo}. Abra o card "TCO do Mês" para ver a evolução mês a mês.`,
     metricas: [
-      { label: "TCO do mês", valor: TCO_RESUMO.total, tom: "alerta" },
+      { label: "TCO do mês", valor: formatarMoedaCompacta(totalTco), tom: "alerta" },
       { label: "Custo por km", valor: "R$ 2,38", tom: "sucesso" },
-      { label: "Média/veículo", valor: TCO_RESUMO.mediaPorVeiculo, tom: "indigo" },
+      { label: "Média/veículo", valor: mediaPorVeiculo, tom: "indigo" },
     ],
-    itens: TCO_RESUMO.itens.slice(0, 3).map((i) => ({
+    itens: itens.slice(0, 3).map((i) => ({
       titulo: i.label,
-      descricao: `R$ ${(i.valor / 1000).toFixed(1).replace(".", ",")} mil · ${Math.round((i.valor / totalTco) * 100)}% do TCO`,
+      descricao: `${formatarMoedaCompacta(i.valor)} · ${Math.round((i.valor / totalTco) * 100)}% do TCO`,
       tom: "neutro" as const,
     })),
     acoes: [],

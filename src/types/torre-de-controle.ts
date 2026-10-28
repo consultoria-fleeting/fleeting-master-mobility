@@ -73,12 +73,30 @@ export interface ItemManutencao {
   tom: TomManutencao;
 }
 
-/** Linha do breakdown do card "Resumo do TCO" */
-export interface ItemTco {
+/** Identificador de cada categoria de custo que compõe o TCO */
+export type CategoriaTcoId = "combustivel" | "manutencao" | "aluguel" | "multas" | "sinistros";
+
+/** Categoria de custo do TCO (rótulo e cor usados no gráfico e na composição) */
+export interface CategoriaTco {
+  id: CategoriaTcoId;
   label: string;
-  /** Valor em reais (número puro, para calcular proporções) */
-  valor: number;
   cor: string;
+}
+
+/** Custos da frota em um mês (base do drawer "TCO do Mês") */
+export interface MesTco {
+  /** Chave única do mês no formato "AAAA-MM" (ex.: "2026-10") */
+  chave: string;
+  /** Mês abreviado para o eixo do gráfico (ex.: "Out") */
+  mes: string;
+  /** Ano com 4 dígitos (ex.: "2026") */
+  ano: string;
+  /** Rótulo completo (ex.: "Outubro/2026") */
+  mesCompleto: string;
+  /** Veículos ativos no mês (usado na média por veículo) */
+  veiculos: number;
+  /** Valor em reais (número puro) de cada categoria */
+  custos: Record<CategoriaTcoId, number>;
 }
 
 /** Barra do gráfico "KMs Rodados" */

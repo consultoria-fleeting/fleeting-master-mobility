@@ -4,11 +4,15 @@
  * Cada card: label em caixa alta + ícone "i" (tooltip com a composição),
  * valor em destaque, complemento opcional, badge de variação e legenda.
  * Clicar no card abre um drawer (Sheet do shadcn/ui) com o detalhamento.
+ *
+ * Por padrão o drawer lista `kpi.detalhes`. Para um KPI com detalhamento rico
+ * (ex.: TCO com gráfico), passe `conteudosPersonalizados={{ [id]: <Componente /> }}`:
+ * o conteúdo substitui a lista e o drawer fica mais largo.
  */
 
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
 import { InfoTooltip } from "@/components/info-tooltip";
 import {
@@ -20,23 +24,10 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import type { KpiTorre } from "@/types/torre-de-controle";
+import { DeltaBadge } from "./delta-badge";
 
-/* ---------- Badge de variação ---------- */
-
-function DeltaBadge({ delta, bom }: Pick<KpiTorre, "delta" | "bom">) {
-  return (
-    <span
-      className={cn(
-        "rounded-md px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
-        bom === null && "bg-[#F1F5F9] text-[#64748B]",
-        bom === true && "bg-[#059669]/10 text-[#059669]",
-        bom === false && "bg-[#E11D48]/10 text-[#E11D48]"
-      )}
-    >
-      {delta}
-    </span>
-  );
-}
+/** Conteúdo customizado do drawer, indexado pelo `id` do KPI */
+export type ConteudosKpi = Partial<Record<string, ReactNode>>;
 
 /* ---------- Card individual ---------- */
 
@@ -90,13 +81,30 @@ function KpiCard({ kpi, indice, onAbrir }: KpiCardProps) {
 
 /* ---------- Drawer de detalhamento ---------- */
 
-function KpiDrawer({ kpi, onFechar }: { kpi: KpiTorre | null; onFechar: () => void }) {
+interface KpiDrawerProps {
+  kpi: KpiTorre | null;
+  aberto: boolean;
+  /** Conteúdo que substitui a lista padrão de `kpi.detalhes` */
+  conteudo?: ReactNode;
+  onFechar: () => void;
+}
+
+function KpiDrawer({ kpi, aberto, conteudo, onFechar }: KpiDrawerProps) {
+  const temConteudo = conteudo !== undefined;
+
   return (
-    <Sheet open={kpi !== null} onOpenChange={(aberto) => !aberto && onFechar()}>
-      <SheetContent side="right" className="font-poppins w-full gap-0 border-[#E7E7F0] bg-white p-0 sm:max-w-[380px]">
+    <Sheet open={aberto} onOpenChange={(estaAberto) => !estaAberto && onFechar()}>
+      <SheetContent
+        side="right"
+        className={cn(
+          "font-poppins w-full gap-0 border-[#E7E7F0] bg-white p-0",
+          // O Sheet base define `data-[side=right]:sm:max-w-sm`; usamos a mesma variante para sobrescrever
+          temConteudo ? "data-[side=right]:sm:max-w-[640px]" : "data-[side=right]:sm:max-w-[380px]"
+        )}
+      >
         {kpi && (
           <>
-            <SheetHeader className="gap-1 bg-[#1E1B4B] p-5 pr-12 text-white">
+            <SheetHeader className="shrink-0 gap-1 bg-[#1E1B4B] p-5 pr-12 text-white">
               <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#A5B4FC]">Detalhamento</span>
               <SheetTitle className="text-[16px] font-semibold text-white">{kpi.label}</SheetTitle>
               <div className="mt-2 flex items-baseline gap-2">
@@ -107,18 +115,22 @@ function KpiDrawer({ kpi, onFechar }: { kpi: KpiTorre | null; onFechar: () => vo
               <SheetDescription className="text-[11.5px] text-[#C7D2FE]">{kpi.legenda}</SheetDescription>
             </SheetHeader>
 
-            <div className="flex flex-col gap-4 p-5">
+            <div className="rolagem-suave flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5">
               <p className="rounded-xl border border-[#E0E7FF] bg-[#EEF2FF]/60 p-3 text-[12px] leading-relaxed text-[#334155]">
                 {kpi.tip}
               </p>
-              <ul className="divide-y divide-[#F1F1F6] rounded-xl border border-[#E7E7F0]">
-                {kpi.detalhes.map((detalhe) => (
-                  <li key={detalhe.label} className="flex items-center justify-between px-3 py-2.5 text-[12px]">
-                    <span className="text-[#64748B]">{detalhe.label}</span>
-                    <span className="font-semibold text-[#1E1B4B]">{detalhe.valor}</span>
-                  </li>
-                ))}
-              </ul>
+              {temConteudo ? (
+                conteudo
+              ) : (
+                <ul className="divide-y divide-[#F1F1F6] rounded-xl border border-[#E7E7F0]">
+                  {kpi.detalhes.map((detalhe) => (
+                    <li key={detalhe.label} className="flex items-center justify-between px-3 py-2.5 text-[12px]">
+                      <span className="text-[#64748B]">{detalhe.label}</span>
+                      <span className="font-semibold text-[#1E1B4B]">{detalhe.valor}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
               <p className="text-[10.5px] text-[#94A3B8]">Dados simulados para validação interna.</p>
             </div>
           </>
@@ -132,19 +144,33 @@ function KpiDrawer({ kpi, onFechar }: { kpi: KpiTorre | null; onFechar: () => vo
 
 interface KpiCardsProps {
   kpis: KpiTorre[];
+  /** Detalhamentos customizados por `id` do KPI (substituem a lista padrão do drawer) */
+  conteudosPersonalizados?: ConteudosKpi;
 }
 
-export function KpiCards({ kpis }: KpiCardsProps) {
-  const [kpiAberto, setKpiAberto] = useState<KpiTorre | null>(null);
+export function KpiCards({ kpis, conteudosPersonalizados = {} }: KpiCardsProps) {
+  // O KPI continua guardado ao fechar para o conteúdo não sumir durante a animação de saída
+  const [kpiSelecionado, setKpiSelecionado] = useState<KpiTorre | null>(null);
+  const [drawerAberto, setDrawerAberto] = useState(false);
+
+  function abrirDrawer(kpi: KpiTorre) {
+    setKpiSelecionado(kpi);
+    setDrawerAberto(true);
+  }
 
   return (
     <>
       <div className="grid shrink-0 grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
         {kpis.map((kpi, indice) => (
-          <KpiCard key={kpi.id} kpi={kpi} indice={indice} onAbrir={setKpiAberto} />
+          <KpiCard key={kpi.id} kpi={kpi} indice={indice} onAbrir={abrirDrawer} />
         ))}
       </div>
-      <KpiDrawer kpi={kpiAberto} onFechar={() => setKpiAberto(null)} />
+      <KpiDrawer
+        kpi={kpiSelecionado}
+        aberto={drawerAberto}
+        conteudo={kpiSelecionado ? conteudosPersonalizados[kpiSelecionado.id] : undefined}
+        onFechar={() => setDrawerAberto(false)}
+      />
     </>
   );
 }
