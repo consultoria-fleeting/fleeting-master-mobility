@@ -586,15 +586,6 @@ export interface CreateExceptionResponse {
   createdBy: string;
 }
 
-export interface DeleteExceptionResponse {
-  message: string;
-  exceptionId: string;
-  eventId: string;
-  driverId: string;
-  scoreBefore: number;
-  scoreAfter: number;
-}
-
 // ---------------------------------------------------------------------------
 // Matriz de Pontuação — Tela 8 do guia (`GET /dashboard/scoring-matrix`)
 // ---------------------------------------------------------------------------

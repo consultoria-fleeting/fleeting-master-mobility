@@ -1,8 +1,11 @@
 import { getTokens } from "@/utils/tokens";
 import { getTokenCookieName } from "@/utils/env-config";
 
-/** Perfis que podem aplicar/revogar exceções (FLEET-2301). Os demais recebem 403 do backend. */
-const PERFIS_GESTORES = ["FLEETING", "ADMIN", "MANAGER", "SUPERADMIN", "GESTOR"];
+/**
+ * Perfis que podem aplicar exceções (Gestão de exceções). Os demais recebem 403 do backend.
+ * Mesma lista de `validateFleetManagerPermission` na api-driver-scoring.
+ */
+const PERFIS_GESTORES = ["FLEETING", "ADMIN", "MANAGER", "SUPERADMIN", "GESTOR", "GESTOR DE FROTA"];
 
 /** Lê o payload (claims) do JWT sem validar assinatura — a validação é sempre do backend. */
 function lerPayloadDoToken(token: string): Record<string, unknown> | null {
@@ -37,7 +40,14 @@ export function canManageExceptions(): boolean {
   if (!token) return true;
 
   const permission = lerPayloadDoToken(token)?.permission;
-  if (typeof permission !== "string") return true;
+  // A claim pode vir como texto ou como objeto `{ per_name }` (mesma leitura do backend).
+  const perfil =
+    typeof permission === "string"
+      ? permission
+      : typeof permission === "object" && permission !== null
+        ? (permission as { per_name?: unknown }).per_name
+        : undefined;
+  if (typeof perfil !== "string" || !perfil) return true;
 
-  return PERFIS_GESTORES.includes(permission.toUpperCase());
+  return PERFIS_GESTORES.includes(perfil.toUpperCase());
 }

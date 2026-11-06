@@ -35,7 +35,7 @@ export function getApiErrorMessage(error: unknown): string {
 }
 
 /**
- * Mensagem amigável para falhas ao APLICAR ou REVOGAR uma exceção (FLEET-2301).
+ * Mensagem amigável para falhas ao APLICAR uma exceção (Gestão de exceções).
  * Erros inesperados caem no `getApiErrorMessage`.
  */
 export function getExceptionActionErrorMessage(error: unknown): string {
@@ -48,13 +48,13 @@ export function getExceptionActionErrorMessage(error: unknown): string {
       case 400:
         return "A justificativa ou os identificadores enviados não foram aceitos. Revise e tente novamente.";
       case 403:
-        return "Você não possui perfil de gestor para aplicar ou revogar exceções.";
+        return "Você não tem permissão para aplicar exceções a este condutor (perfil de gestor de frota ou condutor fora da sua frota).";
       case 404:
-        return "Condutor, evento ou exceção não encontrado.";
+        return "Condutor ou evento não encontrado.";
       case 409:
         return "Já existe uma exceção aplicada para este evento.";
       case 422:
-        return "Este evento não possui impacto na pontuação, por isso não aceita exceção.";
+        return "Este evento não é elegível para exceção.";
     }
   }
 

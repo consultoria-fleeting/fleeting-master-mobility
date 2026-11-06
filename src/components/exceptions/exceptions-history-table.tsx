@@ -1,10 +1,12 @@
 /**
- * ExceptionsHistoryTable — Histórico de exceções da organização (FLEET-2301, `GET /exceptions`).
+ * ExceptionsHistoryTable — Histórico de exceções da organização (Gestão de exceções, `GET /exceptions`).
  *
  * - Busca por nome do condutor com debounce de 400 ms (respeita o rate limit do backend).
- * - Paginação numerada vinda do backend (`total`, `totalPages`, `pageSize`).
+ * - Ordenação pela Data/Hora da exceção, da mais recente para a mais antiga (feita pelo backend).
+ * - Paginação vinda do backend (`total`, `totalPages`, `pageSize`).
+ * - Justificativa truncada com "ver mais", que abre o texto completo em um modal.
  * - O nome do condutor navega pelo UUID (`driverId`).
- * - Ação "Revogar" (gestores) abre `RevokeExceptionDialog`.
+ * - Exceções são irreversíveis: não há ações de edição, revogação ou exclusão.
  * - Perfis sem permissão recebem 403, tratado pelo `QueryState` com mensagem amigável.
  *
  * @example
@@ -16,10 +18,9 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
 import { DriverLink } from "@/components/driver-link";
-import { RevokeExceptionDialog } from "@/components/exceptions/revoke-exception-dialog";
+import { JustificationDialog } from "@/components/exceptions/justification-dialog";
 import { PaginacaoNumerada } from "@/components/paginacao-numerada";
 import { ListSkeleton, QueryState } from "@/components/query-state";
-import { Button } from "@/components/ui/button";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useResettablePage } from "@/hooks/use-resettable-page";
@@ -27,34 +28,50 @@ import { getExceptions } from "@/services/driver-scoring.service";
 import type { ExceptionItem } from "@/types/driver-scoring";
 import { formatDateTime } from "@/utils/driver-scoring-display";
 import { displayValue } from "@/utils/driver-scoring-helpers";
-import { canManageExceptions } from "@/utils/permissions";
 
 const ITENS_POR_PAGINA = 15;
+/** Acima deste tamanho a justificativa é truncada e ganha o "ver mais". */
+const JUSTIFICATIVA_LIMITE = 60;
 
 /** Função estável (fora do componente), exigida pelo `useApiQuery`. */
 const fetchExceptions = getExceptions;
+
+function Justificativa({
+  excecao,
+  onVerMais,
+}: {
+  excecao: ExceptionItem;
+  onVerMais: () => void;
+}) {
+  const texto = excecao.justification ?? "";
+  if (texto.length <= JUSTIFICATIVA_LIMITE) return <>{displayValue(texto)}</>;
+
+  return (
+    <>
+      <span>{texto.slice(0, JUSTIFICATIVA_LIMITE).trimEnd()}…</span>{" "}
+      <button
+        type="button"
+        onClick={onVerMais}
+        className="font-medium text-primary underline-offset-2 hover:underline focus-visible:underline outline-none"
+        aria-label={`Ver justificativa completa da exceção de ${excecao.driverName}`}
+      >
+        ver mais
+      </button>
+    </>
+  );
+}
 
 export function ExceptionsHistoryTable() {
   const [busca, setBusca] = useState("");
   const buscaDebounced = useDebouncedValue(busca.trim(), 400);
   const [pagina, setPagina] = useResettablePage(buscaDebounced);
-  const [excecaoParaRevogar, setExcecaoParaRevogar] = useState<ExceptionItem | null>(null);
-  const podeGerenciar = canManageExceptions();
+  const [excecaoDetalhe, setExcecaoDetalhe] = useState<ExceptionItem | null>(null);
 
   const { data, isLoading, error, refetch } = useApiQuery(fetchExceptions, {
     driverName: buscaDebounced,
     page: pagina,
     pageSize: ITENS_POR_PAGINA,
   });
-
-  /** Após revogar a última exceção de uma página, volta uma página (senão recarrega a atual). */
-  function handleRevogada() {
-    if (data && data.items.length === 1 && pagina > 1) {
-      setPagina(pagina - 1);
-      return;
-    }
-    refetch();
-  }
 
   return (
     <div className="bg-card rounded-lg border border-border p-5">
@@ -94,13 +111,14 @@ export function ExceptionsHistoryTable() {
               <tr className="border-b text-muted-foreground">
                 <th className="text-left py-2 px-2">Tipo</th>
                 <th className="text-left py-2 px-2">Condutor</th>
-                <th className="text-left py-2 px-2">Data do evento</th>
-                <th className="text-left py-2 px-2">Aplicada em</th>
+                <th className="text-left py-2 px-2">Data/Hora do evento</th>
+                <th className="text-left py-2 px-2" aria-sort="descending">
+                  Data/Hora da exceção
+                </th>
                 <th className="text-left py-2 px-2">Justificativa</th>
-                <th className="text-left py-2 px-2">Aplicada por</th>
-                <th className="text-center py-2 px-2">Pontuação Antes</th>
-                <th className="text-center py-2 px-2">Pontuação Depois</th>
-                {podeGerenciar && <th className="text-right py-2 px-2">Ações</th>}
+                <th className="text-center py-2 px-2">Pontuação antes</th>
+                <th className="text-center py-2 px-2">Pontuação depois</th>
+                <th className="text-left py-2 px-2">Aplicado por</th>
               </tr>
             </thead>
             <tbody>
@@ -119,23 +137,14 @@ export function ExceptionsHistoryTable() {
                   <td className="py-2 px-2 text-muted-foreground whitespace-nowrap">
                     {formatDateTime(excecao.appliedAt)}
                   </td>
-                  <td className="py-2 px-2 text-muted-foreground max-w-64">
-                    <span className="line-clamp-2" title={excecao.justification}>
-                      {displayValue(excecao.justification)}
-                    </span>
-                  </td>
-                  <td className="py-2 px-2 text-muted-foreground whitespace-nowrap">
-                    {displayValue(excecao.createdBy)}
+                  <td className="py-2 px-2 text-muted-foreground max-w-72 break-words">
+                    <Justificativa excecao={excecao} onVerMais={() => setExcecaoDetalhe(excecao)} />
                   </td>
                   <td className="py-2 px-2 text-center font-semibold">{excecao.scoreBefore}</td>
                   <td className="py-2 px-2 text-center font-semibold">{excecao.scoreAfter}</td>
-                  {podeGerenciar && (
-                    <td className="py-2 px-2 text-right">
-                      <Button variant="outline" size="xs" onClick={() => setExcecaoParaRevogar(excecao)}>
-                        Revogar
-                      </Button>
-                    </td>
-                  )}
+                  <td className="py-2 px-2 text-muted-foreground whitespace-nowrap">
+                    {displayValue(excecao.createdBy)}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -155,12 +164,11 @@ export function ExceptionsHistoryTable() {
         )}
       </QueryState>
 
-      {excecaoParaRevogar && (
-        <RevokeExceptionDialog
-          key={excecaoParaRevogar.id}
-          excecao={excecaoParaRevogar}
-          onClose={() => setExcecaoParaRevogar(null)}
-          onRevoked={handleRevogada}
+      {excecaoDetalhe && (
+        <JustificationDialog
+          key={excecaoDetalhe.id}
+          excecao={excecaoDetalhe}
+          onClose={() => setExcecaoDetalhe(null)}
         />
       )}
     </div>

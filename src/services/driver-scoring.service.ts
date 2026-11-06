@@ -23,7 +23,6 @@ import type {
   BottomScoringDriversResponse,
   CreateExceptionBody,
   CreateExceptionResponse,
-  DeleteExceptionResponse,
   DistributionQueryParams,
   DriverCategoriesResponse,
   DriverPerformanceDetailQueryParams,
@@ -260,12 +259,7 @@ export async function createException(
   return response.data;
 }
 
-/** Revoga uma exceção: reativa o desconto do evento e restaura a pontuação do mês. */
-export async function deleteException(exceptionId: string): Promise<DeleteExceptionResponse> {
-  const safeId = exceptionIdPathSchema.parse(exceptionId);
-  const response = await driverScoringApi.delete<DeleteExceptionResponse>(`/exceptions/${safeId}`);
-  return response.data;
-}
+// Exceções são irreversíveis (Gestão de exceções): não há função de edição, revogação ou exclusão.
 
 // ---------------------------------------------------------------------------
 // 5.1 a 5.5 — Endpoints de filtros (combos)
