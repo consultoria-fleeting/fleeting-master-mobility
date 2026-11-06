@@ -146,6 +146,7 @@ export default function PerformanceCondutorPage() {
               <DriverEventsTable
                 driverId={data.driver.id}
                 events={data.events.data}
+                monthlyScores={data.monthly_scores}
                 pagination={data.events.pagination}
                 carregando={isLoading}
                 onPaginaChange={setPagina}

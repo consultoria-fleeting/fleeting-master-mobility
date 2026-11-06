@@ -1,17 +1,20 @@
 /**
  * DriverEventsTable — Eventos/infrações do condutor (seção 4.12, `events`).
  *
- * Colunas: data, evento, origem, severidade, pontos, impacto e ações. Quando `has_exception === true`
- * o evento é sinalizado com a etiqueta "Desconsiderado" e a justificativa da exceção
- * (o impacto já vem zerado do backend).
+ * Colunas: data, evento, origem, severidade, pontos, impacto, status e ações.
+ * Quando `has_exception === true` o evento fica com o status "Desconsiderado", o impacto original
+ * aparece riscado (o backend devolve `impact: 0` e preserva `raw_points`) e a justificativa da
+ * exceção é exibida abaixo do nome do evento.
  *
- * Ação "Aplicar exceção" (FLEET-2301): habilitada apenas se `eligible === true` e o usuário tiver
- * perfil de gestor; caso contrário fica desabilitada e mostra `ineligible_reason` no tooltip.
+ * Ação "Aplicar exceção" (Gestão de exceções): habilitada apenas se `eligible === true` e o usuário
+ * tiver perfil de gestor; caso contrário fica desabilitada e o motivo aparece no tooltip
+ * (`ineligible_reason` do backend).
  *
  * @example
  * <DriverEventsTable
  *   driverId={data.driver.id}
  *   events={data.events.data}
+ *   monthlyScores={data.monthly_scores}
  *   pagination={data.events.pagination}
  *   onPaginaChange={setPagina}
  *   onExceptionApplied={refetch}
@@ -23,15 +26,19 @@ import { ShieldCheck } from "lucide-react";
 import { ApplyExceptionDialog } from "@/components/driver-performance/apply-exception-dialog";
 import { PaginacaoNumerada } from "@/components/paginacao-numerada";
 import { Button } from "@/components/ui/button";
-import type { DriverEvent, PaginationTotalPages } from "@/types/driver-scoring";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { DriverEvent, DriverMonthlyScore, PaginationTotalPages } from "@/types/driver-scoring";
 import { formatDateTime, getSeverityClassName } from "@/utils/driver-scoring-display";
 import { displayValue } from "@/utils/driver-scoring-helpers";
+import { getEventMonthScore } from "@/utils/exception-score-estimate";
 import { canManageExceptions } from "@/utils/permissions";
 
 interface DriverEventsTableProps {
   /** UUID do condutor (`driver.id`), usado ao aplicar exceções. */
   driverId: string;
   events: DriverEvent[];
+  /** Pontuações mensais do condutor, usadas na prévia do modal de exceção. */
+  monthlyScores: DriverMonthlyScore[];
   pagination: PaginationTotalPages;
   /** Desabilita a paginação enquanto uma nova página carrega. */
   carregando?: boolean;
@@ -40,24 +47,46 @@ interface DriverEventsTableProps {
   onExceptionApplied: () => void;
 }
 
-/** Nome do evento + selo de exceção com a justificativa. */
+/** Nome do evento + justificativa da exceção, quando houver. */
 function EventoComExcecao({ evento }: { evento: DriverEvent }) {
   return (
     <div>
-      <span className={evento.has_exception ? "line-through text-muted-foreground" : ""}>
-        {evento.label}
-      </span>
+      <span className={evento.has_exception ? "text-muted-foreground" : ""}>{evento.label}</span>
 
       {evento.has_exception && (
         <div className="mt-1 flex items-start gap-1.5 text-[11px] text-emerald-700">
           <ShieldCheck className="w-3.5 h-3.5 shrink-0 mt-px" aria-hidden="true" />
-          <span>
-            <span className="font-semibold">Desconsiderado:</span>{" "}
-            {evento.exception?.justification ?? "Desconsiderado pela Gestão de Exceções"}
-          </span>
+          <span>{evento.exception?.justification ?? "Desconsiderado pela Gestão de Exceções"}</span>
         </div>
       )}
     </div>
+  );
+}
+
+/** Impacto na pontuação; riscado (com o valor original) quando o evento foi desconsiderado. */
+function ImpactoEvento({ evento }: { evento: DriverEvent }) {
+  if (!evento.has_exception) {
+    return <span className="font-bold text-red-600">{evento.impact}</span>;
+  }
+
+  return (
+    <span className="font-bold text-muted-foreground line-through" title="Impacto desconsiderado pela exceção">
+      <span className="sr-only">Impacto desconsiderado: </span>
+      {evento.raw_points ? -evento.raw_points : 0}
+    </span>
+  );
+}
+
+function StatusEvento({ evento }: { evento: DriverEvent }) {
+  const desconsiderado = evento.has_exception || evento.status === "Desconsiderado";
+  return (
+    <span
+      className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap ${
+        desconsiderado ? "bg-emerald-50 text-emerald-700" : "bg-muted text-foreground"
+      }`}
+    >
+      {desconsiderado ? "Desconsiderado" : "Confirmado"}
+    </span>
   );
 }
 
@@ -71,25 +100,40 @@ function BotaoAplicarExcecao({
   podeGerenciar: boolean;
   onClick: () => void;
 }) {
-  // `title` fica no wrapper porque botões desabilitados não disparam hover.
   const motivoBloqueio = !podeGerenciar
     ? "Apenas gestores de frota podem aplicar exceções."
     : !evento.eligible
       ? (evento.ineligible_reason ?? "Este evento não é elegível para exceção.")
       : undefined;
 
+  const botao = (
+    <Button variant="outline" size="xs" disabled={Boolean(motivoBloqueio)} onClick={onClick}>
+      Aplicar exceção
+    </Button>
+  );
+
+  if (!motivoBloqueio) return botao;
+
+  // Botões desabilitados não disparam hover/foco: o tooltip fica num wrapper focável.
   return (
-    <span title={motivoBloqueio} className="inline-block">
-      <Button variant="outline" size="xs" disabled={Boolean(motivoBloqueio)} onClick={onClick}>
-        Aplicar exceção
-      </Button>
-    </span>
+    <Tooltip>
+      <TooltipTrigger
+        render={<span tabIndex={0} aria-label={`Aplicar exceção indisponível: ${motivoBloqueio}`} />}
+        className="inline-block rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
+        {botao}
+      </TooltipTrigger>
+      <TooltipContent side="left" className="max-w-xs text-xs">
+        {motivoBloqueio}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
 export function DriverEventsTable({
   driverId,
   events,
+  monthlyScores,
   pagination,
   carregando = false,
   onPaginaChange,
@@ -112,6 +156,7 @@ export function DriverEventsTable({
               <th className="text-left py-2 px-2">Severidade</th>
               <th className="text-right py-2 px-2">Pontos</th>
               <th className="text-right py-2 px-2">Impacto</th>
+              <th className="text-left py-2 px-2">Status</th>
               <th className="text-right py-2 px-2">Ações</th>
             </tr>
           </thead>
@@ -133,29 +178,24 @@ export function DriverEventsTable({
                     {evento.severity}
                   </td>
                   <td className="py-2 px-2 text-right">{evento.raw_points}</td>
-                  <td
-                    className={`py-2 px-2 text-right font-bold ${
-                      evento.has_exception ? "text-muted-foreground" : "text-red-600"
-                    }`}
-                  >
-                    {evento.impact}
+                  <td className="py-2 px-2 text-right">
+                    <ImpactoEvento evento={evento} />
+                  </td>
+                  <td className="py-2 px-2">
+                    <StatusEvento evento={evento} />
                   </td>
                   <td className="py-2 px-2 text-right">
-                    {evento.has_exception ? (
-                      <span className="text-[11px] text-muted-foreground">Desconsiderado</span>
-                    ) : (
-                      <BotaoAplicarExcecao
-                        evento={evento}
-                        podeGerenciar={podeGerenciar}
-                        onClick={() => setEventoSelecionado(evento)}
-                      />
-                    )}
+                    <BotaoAplicarExcecao
+                      evento={evento}
+                      podeGerenciar={podeGerenciar}
+                      onClick={() => setEventoSelecionado(evento)}
+                    />
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={7} className="text-center py-8 text-muted-foreground">
+                <td colSpan={8} className="text-center py-8 text-muted-foreground">
                   Nenhum evento registrado no período.
                 </td>
               </tr>
@@ -179,6 +219,7 @@ export function DriverEventsTable({
           key={eventoSelecionado.id}
           driverId={driverId}
           evento={eventoSelecionado}
+          pontuacaoAtual={getEventMonthScore(eventoSelecionado, monthlyScores)}
           onClose={() => setEventoSelecionado(null)}
           onApplied={onExceptionApplied}
         />
