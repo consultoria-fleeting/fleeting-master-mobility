@@ -127,7 +127,7 @@ export function ExceptionsHistoryTable() {
                   key={excecao.id}
                   className="border-b last:border-0 hover:bg-muted/50 transition-colors align-top"
                 >
-                  <td className="py-2 px-2">{excecao.eventLabel}</td>
+                  <td className="py-2 px-2">{excecao.label || excecao.eventLabel}</td>
                   <td className="py-2 px-2 whitespace-nowrap">
                     <DriverLink driverId={excecao.driverId} nome={excecao.driverName} />
                   </td>

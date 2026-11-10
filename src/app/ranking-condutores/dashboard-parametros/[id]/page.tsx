@@ -10,19 +10,20 @@
  * (ids que não forem UUID válido são descartados antes de chegar à API).
  *
  * Rota: /ranking-condutores/dashboard-parametros/[id]?year=...&month=...&level=...
- * `[id]` é o código do evento (ex.: HARSH_BRAKING) ou `all-events`.
+ * `[id]` é o código do evento (ex.: HARSH_BRAKING, SPEED_HIGH>140, codificado na URL) ou `all-events`.
+ * O título usa o `label` traduzido devolvido pela API (fallback: dicionário local até a resposta chegar).
  */
 
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { ParameterDetailsTable } from "@/components/parameter-details-table";
 import { ALL_EVENTS_IDENTIFIER, type DashboardHierarchyFilters } from "@/types/driver-scoring";
 import { EXPOSURE_LEVELS } from "@/utils/driver-scoring-display";
-import { getEventTypeLabel } from "@/utils/driver-scoring-helpers";
+import { resolveEventLabel } from "@/utils/driver-scoring-helpers";
 import { parseParameterDetailsSearchParams } from "@/utils/ranking-search-params";
 import { NOMES_MESES } from "@/hooks/use-ranking-page-filters";
 
@@ -52,8 +53,14 @@ export default function DetalhamentoParametroPage() {
     return { year, month, level, filtros };
   }, [searchParams]);
 
+  // Label da API guardado junto do evento a que pertence (evita título antigo ao trocar de rota).
+  const [labelApi, setLabelApi] = useState<{ eventType: string; label: string }>();
+  const handleLabelChange = useCallback((label: string) => setLabelApi({ eventType, label }), [eventType]);
+
   const titulo =
-    eventType === ALL_EVENTS_IDENTIFIER ? "Todos os eventos" : getEventTypeLabel(eventType);
+    eventType === ALL_EVENTS_IDENTIFIER
+      ? "Todos os eventos"
+      : resolveEventLabel(labelApi?.eventType === eventType ? labelApi.label : undefined, eventType);
   const nivel = EXPOSURE_LEVELS.find((item) => item.level === level);
 
   return (
@@ -88,7 +95,13 @@ export default function DetalhamentoParametroPage() {
         </span>
       </div>
 
-      <ParameterDetailsTable eventType={eventType} ano={year} mes={month} filtros={filtros} />
+      <ParameterDetailsTable
+        eventType={eventType}
+        ano={year}
+        mes={month}
+        filtros={filtros}
+        onLabelChange={handleLabelChange}
+      />
     </div>
   );
 }

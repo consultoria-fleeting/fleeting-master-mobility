@@ -1,8 +1,8 @@
 /**
  * EventsVolumeChart — Volume de eventos por tipo (seção 4.8 da spec).
  *
- * `GET /dashboard/events-volume`: os códigos `event_type` são traduzidos com `getEventTypeLabel`.
- * O backend já ordena por total decrescente.
+ * `GET /dashboard/events-volume`: o nome de cada barra é o `label` da API (traduzido pela matriz da
+ * organização). O backend já ordena por total decrescente (empate: `label` em ordem alfabética).
  *
  * @example
  * <EventsVolumeChart ano={2026} mes={3} filtros={filtros} />
@@ -17,7 +17,7 @@ import { ChartSkeleton, QueryState } from "@/components/query-state";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { getEventsVolume } from "@/services/driver-scoring.service";
 import type { DashboardHierarchyFilters } from "@/types/driver-scoring";
-import { getEventTypeLabel } from "@/utils/driver-scoring-helpers";
+import { resolveEventLabel } from "@/utils/driver-scoring-helpers";
 
 const MIN_CHART_HEIGHT = 300;
 const HEIGHT_PER_BAR = 30;
@@ -37,7 +37,7 @@ export function EventsVolumeChart({ ano, mes, filtros }: EventsVolumeChartProps)
   });
 
   const rows = useMemo(
-    () => (data ?? []).map((item) => ({ name: getEventTypeLabel(item.event_type), total: item.total })),
+    () => (data ?? []).map((item) => ({ name: resolveEventLabel(item.label, item.event_type), total: item.total })),
     [data],
   );
 

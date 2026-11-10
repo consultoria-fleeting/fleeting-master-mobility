@@ -80,7 +80,7 @@ export const EXPOSURE_LEVELS: {
 
 /** Regras (a primeira que casar vence) para escolher o ícone do card de um evento. */
 const EVENT_ICON_RULES: [RegExp, string][] = [
-  [/OVER_140|EXTREME/, "Skull"],
+  [/OVER_140|>\s*140|EXTREME/, "Skull"],
   [/SPEED/, "Gauge"],
   [/DISTANCE/, "Gauge"],
   [/ACCELERATION/, "TrendingUp"],

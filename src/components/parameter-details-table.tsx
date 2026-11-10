@@ -2,7 +2,8 @@
  * ParameterDetailsTable — Drill-down de um evento do ranking (seção 4.9 da spec).
  *
  * `GET /dashboard/ranking-parameters/:eventType/details`, paginado com `pagination.lastPage`.
- * `eventType` pode ser um código (ex.: `HARSH_BRAKING`) ou `all-events`.
+ * `eventType` pode ser um código (ex.: `HARSH_BRAKING`, `SPEED_HIGH>140`), a label traduzida ou `all-events`.
+ * O nome traduzido do evento (`label` da resposta) é repassado à página via `onLabelChange`.
  *
  * Atenção: a API não devolve o id do condutor nesta rota, portanto as linhas NÃO são clicáveis
  * (navegar por nome é frágil — veja a seção 8.2 da spec).
@@ -13,6 +14,7 @@
 
 "use client";
 
+import { useEffect } from "react";
 import { ClassificationLabelBadge } from "@/components/classification-label-badge";
 import { PaginacaoNumerada } from "@/components/paginacao-numerada";
 import { ListSkeleton, QueryState } from "@/components/query-state";
@@ -32,6 +34,8 @@ interface ParameterDetailsTableProps {
   /** Mês de 1 a 12. */
   mes: number;
   filtros: DashboardHierarchyFilters;
+  /** Recebe o `label` traduzido devolvido pela API (ex.: para o título da página). */
+  onLabelChange?: (label: string) => void;
 }
 
 /** Função estável (fora do componente), exigida pelo `useApiQuery`. */
@@ -47,7 +51,13 @@ const fetchDetails = (params: {
   return getRankingParameterDetails(eventType, { ...query, ...filters });
 };
 
-export function ParameterDetailsTable({ eventType, ano, mes, filtros }: ParameterDetailsTableProps) {
+export function ParameterDetailsTable({
+  eventType,
+  ano,
+  mes,
+  filtros,
+  onLabelChange,
+}: ParameterDetailsTableProps) {
   const [pagina, setPagina] = useResettablePage(JSON.stringify({ eventType, ano, mes, filtros }));
 
   const { data, isLoading, error, refetch } = useApiQuery(fetchDetails, {
@@ -58,6 +68,11 @@ export function ParameterDetailsTable({ eventType, ano, mes, filtros }: Paramete
     limit: ITENS_POR_PAGINA,
     filters: filtros,
   });
+
+  const label = data?.label;
+  useEffect(() => {
+    if (label) onLabelChange?.(label);
+  }, [label, onLabelChange]);
 
   return (
     <div className="bg-card rounded-lg border border-border p-5 overflow-hidden">

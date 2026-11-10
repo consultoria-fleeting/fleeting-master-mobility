@@ -34,7 +34,7 @@ export function JustificationDialog({ excecao, onClose }: JustificationDialogPro
         <DialogHeader>
           <DialogTitle>Justificativa da exceção</DialogTitle>
           <DialogDescription>
-            {excecao.eventLabel} — {excecao.driverName} · aplicada em {formatDateTime(excecao.appliedAt)} por{" "}
+            {excecao.label || excecao.eventLabel} — {excecao.driverName} · aplicada em {formatDateTime(excecao.appliedAt)} por{" "}
             {displayValue(excecao.createdBy)}
           </DialogDescription>
         </DialogHeader>

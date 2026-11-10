@@ -1,7 +1,8 @@
 /**
  * Utilitários de tradução e cores do Ranking de Condutores (`api-driver-scoring`).
  *
- * - `getEventTypeLabel`: traduz os códigos de evento (inglês) para PT-BR.
+ * - `resolveEventLabel`: nome do evento vindo da API (`label`), com fallback em `getEventTypeLabel`.
+ * - `getEventTypeLabel`: dicionário local de códigos de evento -> PT-BR (apenas fallback).
  * - `getClassificationStyle`: devolve a cor semântica de uma classificação.
  *   O backend NÃO retorna cores e os nomes das classificações são dinâmicos
  *   por organização, por isso o mapeamento é feito por texto normalizado.
@@ -82,6 +83,15 @@ function snakeCaseToTitleCase(value: string): string {
 export function getEventTypeLabel(eventType: string): string {
   const code = eventType.trim();
   return EVENT_TYPE_LABELS[code.toUpperCase()] ?? snakeCaseToTitleCase(code);
+}
+
+/**
+ * Nome do evento para exibição. Prioriza o `label` enviado pela API (traduzido pela
+ * `scoring_matrix` da organização, já que os códigos são dinâmicos, ex.: `SPEED_HIGH>140`).
+ * O dicionário local (`getEventTypeLabel`) é só fallback para respostas sem `label`.
+ */
+export function resolveEventLabel(label: string | null | undefined, eventType: string): string {
+  return label?.trim() || getEventTypeLabel(eventType);
 }
 
 // ---------------------------------------------------------------------------

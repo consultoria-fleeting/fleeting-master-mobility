@@ -2,7 +2,7 @@
  * RankingParametersCards — Eventos por nível de exposição (seção 4.7 da spec).
  *
  * `GET /dashboard/ranking-parameters`: grupos `CRITICAL`, `HIGH`, `MEDIUM` e `LOW`.
- * Os códigos `event_type` são traduzidos com `getEventTypeLabel` e cada grupo é ordenado
+ * O nome de cada card vem do `label` da API (traduzido pela matriz da organização) e cada grupo é ordenado
  * por `total` decrescente. Clicar em um card abre o detalhe (4.9) preservando período e filtros.
  *
  * @example
@@ -22,7 +22,7 @@ import type {
   RankingParameterEvent,
 } from "@/types/driver-scoring";
 import { EXPOSURE_LEVELS, getEventTypeIcon } from "@/utils/driver-scoring-display";
-import { getEventTypeLabel } from "@/utils/driver-scoring-helpers";
+import { resolveEventLabel } from "@/utils/driver-scoring-helpers";
 import { buildParameterDetailsQuery, getParameterDetailsPath } from "@/utils/ranking-search-params";
 
 interface RankingParametersCardsProps {
@@ -80,7 +80,7 @@ export function RankingParametersCards({ ano, mes, filtros }: RankingParametersC
                 {events.map((event) => (
                   <ParametroCard
                     key={event.event_type}
-                    label={getEventTypeLabel(event.event_type)}
+                    label={resolveEventLabel(event.label, event.event_type)}
                     total={event.total}
                     icone={getEventTypeIcon(event.event_type)}
                     bgClasse={bgClassName}

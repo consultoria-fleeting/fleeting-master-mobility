@@ -334,3 +334,10 @@ Integração com o backend `api-driver-scoring` (spec: `API_DRIVER_SCORING_SPEC.
 - **Matriz com origem livre**: `EventoPontuacao.origem` passou a `string` (o backend já traduz); origens desconhecidas usam estilo neutro e vão ao final da tabela.
 - **Categoria → filtro**: os nomes das classificações são dinâmicos; `getCategoryFilter` converte o card no filtro pelo nível semântico do título (card desconhecido não fica clicável). `classification=todos` não é enviado ao backend.
 - **Pendências de alinhamento com o back-end** (não alteradas por falta de confirmação): o guia diz que `/dashboard/ranking` (4.1) aceita filtros hierárquicos, mas a spec antiga dizia que só aceita `managerId`; as cores de classificação do protótipo Lovable diferem das nossas; o guia navega por nome nos top lists, mas mantemos sempre UUID.
+
+### Labels de eventos vindos da API (10/11/2026)
+
+- **Fonte**: atualização do `frontend-integration-guide.md` (commit `e2606f0` do `api-driver-scoring`). Detalhes em `docs/labels-eventos-api.md`.
+- **`label` da API em vez de dicionário**: os códigos de evento passaram a ser dinâmicos por organização (ex.: `SPEED_HIGH>140`), então Parâmetros, Volume de Eventos, Detalhe do Parâmetro e Gestão de Exceções exibem o `label` do backend via `resolveEventLabel`. `EVENT_TYPE_LABELS`/`getEventTypeLabel` ficam só como fallback até o backend novo estar em todos os ambientes.
+- **Título do detalhe pelo backend**: `ParameterDetailsTable` expõe `onLabelChange`; a página guarda o label junto do `eventType` (sem título antigo ao trocar de rota).
+- **Ícones seguem pelo código**: `getEventTypeIcon` passou a reconhecer `>140` como evento extremo (`Skull`).

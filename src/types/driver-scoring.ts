@@ -305,8 +305,10 @@ export type BottomScoringDriversResponse = BottomScoringDriver[];
 // ---------------------------------------------------------------------------
 
 export interface RankingParameterEvent {
-  /** Código interno, ex.: `'HARSH_BRAKING'`. */
+  /** Código interno, ex.: `'HARSH_BRAKING'` ou `'SPEED_HIGH>140'` (pode variar por organização). */
   event_type: string;
+  /** Nome já traduzido pelo backend (`scoring_matrix.label` da organização). Usar este campo na tela. */
+  label: string;
   /** Ocorrências no período (0 se nunca ocorreu). */
   total: number;
 }
@@ -325,6 +327,8 @@ export interface RankingParametersResponse {
 
 export interface EventVolumeItem {
   event_type: string;
+  /** Nome já traduzido pelo backend (`scoring_matrix.label` da organização). */
+  label: string;
   total: number;
 }
 export type EventsVolumeResponse = EventVolumeItem[];
@@ -351,8 +355,10 @@ export interface RankingParameterDetailRow {
 }
 
 export interface RankingParameterDetailsResponse {
-  /** Eco do path param (`'all-events'` inclusive). */
+  /** Código canônico resolvido pelo backend (o path aceita código ou label); `'all-events'` inclusive. */
   event_type: string;
+  /** Nome traduzido do evento (`'Todos os Eventos'` quando `all-events`). */
+  label: string;
   /** Mesmo valor de `pagination.total`. */
   total_events_period: number;
   period: {
@@ -492,6 +498,8 @@ export interface DriverEvent {
   date: string;
   /** `event_type` (código). */
   type: string;
+  /** Alias de `type` (mesmo código). */
+  event_type?: string;
   /** Nome PT-BR do evento. */
   label: string;
   /** Origem já traduzida pelo backend (ex.: `'Telemetria'`); tratar como string livre. */
@@ -545,7 +553,9 @@ export interface ExceptionItem {
   eventId: string;
   /** Código do evento (ex.: `EXCESS_SPEED_HIGH`). */
   eventType: string;
-  /** Nome PT-BR do evento. */
+  /** Nome do evento traduzido pela `scoring_matrix` da organização. */
+  label: string;
+  /** Mesmo valor de `label` (mantido pelo backend por compatibilidade). */
   eventLabel: string;
   driverId: string;
   driverName: string;
