@@ -102,33 +102,33 @@ export interface ClassificationStyle {
 }
 
 const CLASSIFICATION_STYLES: Record<ClassificationLevel, ClassificationStyle> = {
-  // Verde — sucesso
+  // Verde — referência
   referencia: {
     level: "referencia",
-    color: "#22c55e",
-    badgeClassName: "bg-green-500 text-white",
-    textClassName: "text-green-600",
+    color: "#92D050",
+    badgeClassName: "bg-[#92D050] text-black",
+    textClassName: "text-[#92D050]",
   },
-  // Azul — baixo risco
+  // Amarelo — baixa exposição
   baixa: {
     level: "baixa",
-    color: "#3b82f6",
-    badgeClassName: "bg-blue-500 text-white",
-    textClassName: "text-blue-600",
+    color: "#EEDA2B",
+    badgeClassName: "bg-[#EEDA2B] text-black",
+    textClassName: "text-[#EEDA2B]",
   },
-  // Amarelo — alerta
+  // Vermelho — média exposição
   media: {
     level: "media",
-    color: "#eab308",
-    badgeClassName: "bg-yellow-400 text-black",
-    textClassName: "text-yellow-600",
+    color: "#FF0000",
+    badgeClassName: "bg-[#FF0000] text-white",
+    textClassName: "text-[#FF0000]",
   },
-  // Vermelho — perigo
+  // Roxo — alta exposição
   alta: {
     level: "alta",
-    color: "#ef4444",
-    badgeClassName: "bg-red-500 text-white",
-    textClassName: "text-red-600",
+    color: "#9B23AB",
+    badgeClassName: "bg-[#9B23AB] text-white",
+    textClassName: "text-[#9B23AB]",
   },
   // Cinza — texto fora do padrão esperado
   desconhecida: {

@@ -44,7 +44,7 @@ export function TopDriversCard({ variante, ano, mes, filtros }: TopDriversCardPr
       <TopRankingList
         titulo="Top 10 Condutores Referência"
         icone={Trophy}
-        corIcone="text-green-500"
+        corIcone="text-[#92D050]"
         descricao="Os 10 condutores com maior pontuação no período selecionado, classificados como Referência."
         linhas={linhas}
         isLoading={referencia.isLoading}

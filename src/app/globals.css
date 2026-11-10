@@ -45,10 +45,10 @@
   --radius: 0.5rem;
 
   /* Classificação de risco */
-  --referencia: 100 52% 52%;
-  --baixa-exposicao: 52 83% 54%;
-  --media-exposicao: 0 80% 55%;
-  --alta-exposicao: 285 55% 45%;
+  --referencia: 89.1 57.7% 56.5%; /* #92D050 */
+  --baixa-exposicao: 53.8 85.2% 55.1%; /* #EEDA2B */
+  --media-exposicao: 0 100% 50%; /* #FF0000 */
+  --alta-exposicao: 292.9 66% 40.4%; /* #9B23AB */
 
   /* Sidebar */
   --sidebar-background: 218 82% 22%;
