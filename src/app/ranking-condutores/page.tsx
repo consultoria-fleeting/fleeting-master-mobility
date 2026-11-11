@@ -77,7 +77,7 @@ export default function DashboardRankingPage() {
 
       {/* ==================== ANÁLISES GRÁFICAS ==================== */}
       <div>
-        <h2 className="text-lg font-semibold text-foreground mb-4">
+        <h2 className="text-lg font-bold text-foreground mb-4">
           Análises Gráficas
         </h2>
       </div>
@@ -85,16 +85,37 @@ export default function DashboardRankingPage() {
       {/* Evolução do Comportamento — Ano */}
       <AnnualEvolutionChart ano={anoSelecionado} filtros={filtrosApi} />
 
-      {/* Distribuição por Departamento / Unidade / Filial */}
-      <DriversDistributionChart ano={anoSelecionado} mes={mesNumero} filtros={filtrosApi} />
-
-      {/* Registros de Fadiga por Filial (4.10) */}
-      <FatigueDistributionChart
-        ano={anoSelecionado}
-        mes={mesNumero}
-        filtros={filtrosApi}
-        groupByInicial="company"
-      />
+      {/* Grid 2x2: Unidade, Departamento, Filial e Fadiga por Filial */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <DriversDistributionChart
+          ano={anoSelecionado}
+          mes={mesNumero}
+          filtros={filtrosApi}
+          groupByInicial="unit"
+          ocultarSeletorAgrupamento
+        />
+        <DriversDistributionChart
+          ano={anoSelecionado}
+          mes={mesNumero}
+          filtros={filtrosApi}
+          groupByInicial="department"
+          ocultarSeletorAgrupamento
+        />
+        <DriversDistributionChart
+          ano={anoSelecionado}
+          mes={mesNumero}
+          filtros={filtrosApi}
+          groupByInicial="company"
+          ocultarSeletorAgrupamento
+        />
+        <FatigueDistributionChart
+          ano={anoSelecionado}
+          mes={mesNumero}
+          filtros={filtrosApi}
+          groupByInicial="company"
+          ocultarSeletorAgrupamento
+        />
+      </div>
 
       {/* Quantidade de Eventos por Parâmetro do Ranking (4.8) */}
       <EventsVolumeChart ano={anoSelecionado} mes={mesNumero} filtros={filtrosApi} />

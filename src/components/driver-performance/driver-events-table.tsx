@@ -144,7 +144,7 @@ export function DriverEventsTable({
 
   return (
     <div className="bg-card rounded-lg border border-border p-5">
-      <h3 className="text-base font-semibold text-foreground mb-4">Eventos Registrados</h3>
+      <h3 className="text-base font-bold text-foreground mb-4">Eventos Registrados</h3>
 
       <div className="overflow-x-auto">
         <table className="w-full text-xs">

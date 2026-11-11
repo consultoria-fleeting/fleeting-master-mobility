@@ -18,11 +18,37 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { getDriverCategories } from "@/services/driver-scoring.service";
 import type { DashboardHierarchyFilters } from "@/types/driver-scoring";
-import { getCategoryFilter, getClassificationStyle } from "@/utils/driver-scoring-helpers";
+import {
+  getCategoryFilter,
+  getClassificationStyle,
+  type ClassificationLevel,
+} from "@/utils/driver-scoring-helpers";
 import { getCategoryPath } from "@/utils/ranking-search-params";
 
 /** Categoria que o backend usa para o card de total. */
 const TOTAL_CATEGORY = "total";
+
+/** Textos fixos padronizados para cada categoria de classificação no Dashboard Geral. */
+const TEXTOS_CATEGORIA: Partial<
+  Record<ClassificationLevel, { titulo: string; subtitulo: string }>
+> = {
+  referencia: {
+    titulo: "Referência",
+    subtitulo: "> 85 pontos no mês",
+  },
+  baixa: {
+    titulo: "Baixa Exposição",
+    subtitulo: "Entre 40-85 no mês",
+  },
+  media: {
+    titulo: "Média Exposição",
+    subtitulo: "< 40 pontos",
+  },
+  alta: {
+    titulo: "Alta Exposição ao Risco",
+    subtitulo: "Condutor sem pontos",
+  },
+};
 
 const GRID_CLASSES = "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3";
 
@@ -60,15 +86,18 @@ export function DriverCategoryCards({ ano, mes, filtros }: DriverCategoryCardsPr
       <div className={GRID_CLASSES}>
         {data?.map((card) => {
           const isTotal = card.category === TOTAL_CATEGORY;
-          const estilo = getClassificationStyle(card.title);
+          const estilo = getClassificationStyle(`${card.category} ${card.title}`);
           const classificacao = getCategoryFilter(card.category, card.title);
+          const textoFixo = isTotal
+            ? { titulo: "Total Condutores", subtitulo: undefined }
+            : TEXTOS_CATEGORIA[estilo.level];
 
           return (
             <StatCard
               key={card.category}
-              titulo={card.title}
+              titulo={textoFixo ? textoFixo.titulo : card.title}
               valor={card.count}
-              subtitulo={card.subtitle}
+              subtitulo={textoFixo ? textoFixo.subtitulo : card.subtitle}
               icone={isTotal ? Users : estilo.level === "referencia" ? Trophy : undefined}
               variante={isTotal ? "primary" : "default"}
               classeCor={isTotal ? undefined : estilo.badgeClassName}

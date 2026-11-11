@@ -78,7 +78,7 @@ export function BarChartHorizontal({
           />
           <Tooltip />
           {mostrarLegenda && (
-            <Legend iconSize={8} wrapperStyle={{ fontSize: 11 }} />
+            <Legend itemSorter={null} iconSize={8} wrapperStyle={{ fontSize: 11 }} />
           )}
           {series.map((serie) => (
             <Bar

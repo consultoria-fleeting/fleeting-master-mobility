@@ -21,12 +21,17 @@ import { useState } from "react";
 import { ClassificationLabelBadge } from "@/components/classification-label-badge";
 import { DriverLink } from "@/components/driver-link";
 import { InfoTooltip } from "@/components/info-tooltip";
+import { PaginacaoNumerada } from "@/components/paginacao-numerada";
 import { PaginacaoSimples } from "@/components/paginacao-simples";
 import { ListSkeleton, QueryState } from "@/components/query-state";
 import { ScoreCircle } from "@/components/score-circle";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useApiQuery } from "@/hooks/use-api-query";
-import { getRanking, type GetRankingInput } from "@/services/driver-scoring.service";
+import {
+  getDriverCategories,
+  getRanking,
+  type GetRankingInput,
+} from "@/services/driver-scoring.service";
 import type { RankingAnnualItem, RankingMonthlyItem } from "@/types/driver-scoring";
 import { displayValue, formatScore, RANKING_ANNUAL_MONTHS } from "@/utils/driver-scoring-helpers";
 
@@ -76,6 +81,25 @@ export function RankingCondutores({ ano, mes, managerId }: RankingCondutoresProp
   const consultaAtiva = aba === "monthly" ? mensal : anual;
   const quantidadeItens = consultaAtiva.data?.length ?? 0;
 
+  /* ---------- Total de condutores para paginação numerada ---------- */
+  const categorias = useApiQuery(getDriverCategories, {
+    year: ano,
+    month: mes,
+    company_id: "",
+    unit_id: "",
+    department_id: "",
+    cost_center_id: "",
+    manager_id: managerId,
+    driver_name: "",
+  });
+
+  const totalCondutores =
+    categorias.data?.find((card) => card.category === "total")?.count ?? 0;
+  const totalPaginas = Math.max(
+    pagina,
+    Math.ceil(totalCondutores / ITENS_POR_PAGINA),
+  );
+
   return (
     <div className="bg-card rounded-lg border border-border p-5 overflow-hidden">
       <Tabs
@@ -83,19 +107,21 @@ export function RankingCondutores({ ano, mes, managerId }: RankingCondutoresProp
         onValueChange={(valor) => setAba(valor as Aba)}
         className="flex-col min-w-0"
       >
-        <div className="flex items-center justify-between mb-1">
-          <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            Ranking dos Condutores
-            <InfoTooltip texto="Classificação geral de todos os condutores com base na pontuação do período selecionado." />
-          </h3>
+        <div className="flex items-start justify-between gap-3 mb-2">
+          <div>
+            <h3 className="text-lg font-bold text-foreground flex items-center gap-2 leading-tight">
+              Ranking dos Condutores
+              <InfoTooltip texto="Classificação geral de todos os condutores com base na pontuação do período selecionado." />
+            </h3>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Esta tabela responde apenas ao período e ao filtro de Gestor.
+            </p>
+          </div>
           <TabsList>
             <TabsTrigger value="monthly">Mensal</TabsTrigger>
             <TabsTrigger value="annual">Anual</TabsTrigger>
           </TabsList>
         </div>
-        <p className="text-[11px] text-muted-foreground mb-4">
-          Esta tabela responde apenas ao período e ao filtro de Gestor.
-        </p>
 
         {/* ==================== ABA MENSAL ==================== */}
         <TabsContent value="monthly">
@@ -131,12 +157,25 @@ export function RankingCondutores({ ano, mes, managerId }: RankingCondutoresProp
           </QueryState>
         </TabsContent>
 
-        <PaginacaoSimples
-          pagina={pagina}
-          temProximaPagina={quantidadeItens === ITENS_POR_PAGINA}
-          desabilitado={consultaAtiva.isLoading}
-          onPaginaChange={handlePaginaChange}
-        />
+        {totalCondutores > 0 ? (
+          <PaginacaoNumerada
+            pagina={pagina}
+            totalPaginas={totalPaginas}
+            totalItens={totalCondutores}
+            itensPorPagina={ITENS_POR_PAGINA}
+            rotuloItens="condutores"
+            desabilitado={consultaAtiva.isLoading}
+            mostrarSempre
+            onPaginaChange={handlePaginaChange}
+          />
+        ) : (
+          <PaginacaoSimples
+            pagina={pagina}
+            temProximaPagina={quantidadeItens === ITENS_POR_PAGINA}
+            desabilitado={consultaAtiva.isLoading}
+            onPaginaChange={handlePaginaChange}
+          />
+        )}
       </Tabs>
     </div>
   );
@@ -148,12 +187,12 @@ export function RankingCondutores({ ano, mes, managerId }: RankingCondutoresProp
 function CabecalhoInfo() {
   return (
     <>
-      <th className="text-left py-2">Condutor</th>
-      <th className="text-left py-2">Gestor</th>
-      <th className="text-left py-2">C. Custo</th>
-      <th className="text-left py-2">Filial</th>
-      <th className="text-left py-2">Departamento</th>
-      <th className="text-left py-2">Unidade</th>
+      <th className="text-left py-2.5 px-3 whitespace-nowrap">Condutor</th>
+      <th className="text-left py-2.5 px-3 whitespace-nowrap">Gestor</th>
+      <th className="text-left py-2.5 px-3 whitespace-nowrap">C. Custo</th>
+      <th className="text-left py-2.5 px-3 whitespace-nowrap">Filial</th>
+      <th className="text-left py-2.5 px-3 whitespace-nowrap">Departamento</th>
+      <th className="text-left py-2.5 px-3 whitespace-nowrap">Unidade</th>
     </>
   );
 }
@@ -162,14 +201,14 @@ function CabecalhoInfo() {
 function CelulasInfo({ item }: { item: RankingMonthlyItem | RankingAnnualItem }) {
   return (
     <>
-      <td className="py-2 whitespace-nowrap">
+      <td className="py-2.5 px-3 whitespace-nowrap">
         <DriverLink driverId={item.id} nome={item.driver} />
       </td>
-      <td className="py-2 text-muted-foreground whitespace-nowrap">{displayValue(item.manager)}</td>
-      <td className="py-2 text-muted-foreground">{displayValue(item.costCenter)}</td>
-      <td className="py-2 text-muted-foreground">{displayValue(item.branch)}</td>
-      <td className="py-2 text-muted-foreground">{displayValue(item.department)}</td>
-      <td className="py-2 text-muted-foreground">{displayValue(item.unit)}</td>
+      <td className="py-2.5 px-3 text-muted-foreground whitespace-nowrap">{displayValue(item.manager)}</td>
+      <td className="py-2.5 px-3 text-muted-foreground whitespace-nowrap">{displayValue(item.costCenter)}</td>
+      <td className="py-2.5 px-3 text-muted-foreground whitespace-nowrap">{displayValue(item.branch)}</td>
+      <td className="py-2.5 px-3 text-muted-foreground whitespace-nowrap">{displayValue(item.department)}</td>
+      <td className="py-2.5 px-3 text-muted-foreground whitespace-nowrap">{displayValue(item.unit)}</td>
     </>
   );
 }
@@ -177,13 +216,13 @@ function CelulasInfo({ item }: { item: RankingMonthlyItem | RankingAnnualItem })
 function RankingMensalTabela({ itens }: { itens: RankingMonthlyItem[] }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-xs">
+      <table className="w-full min-w-[980px] text-xs">
         <thead>
           <tr className="border-b text-muted-foreground">
-            <th className="text-left py-2 px-2">#</th>
+            <th className="text-left py-2.5 px-3 whitespace-nowrap">#</th>
             <CabecalhoInfo />
-            <th className="text-right py-2 px-2">Pontuação</th>
-            <th className="text-right py-2 px-2">Classificação</th>
+            <th className="text-right py-2.5 px-3 whitespace-nowrap">Pontuação</th>
+            <th className="text-right py-2.5 px-3 whitespace-nowrap">Classificação</th>
           </tr>
         </thead>
         <tbody>
@@ -192,10 +231,10 @@ function RankingMensalTabela({ itens }: { itens: RankingMonthlyItem[] }) {
               key={item.id}
               className="border-b last:border-0 hover:bg-muted/50 transition-colors"
             >
-              <td className="py-2 px-2 font-medium">{item.pos}</td>
+              <td className="py-2.5 px-3 font-medium whitespace-nowrap">{item.pos}</td>
               <CelulasInfo item={item} />
-              <td className="py-2 px-2 text-right font-bold">{formatScore(item.score)}</td>
-              <td className="py-2 px-2 text-right">
+              <td className="py-2.5 px-3 text-right font-bold whitespace-nowrap">{formatScore(item.score)}</td>
+              <td className="py-2.5 px-3 text-right whitespace-nowrap">
                 <ClassificationLabelBadge label={item.classification} />
               </td>
             </tr>

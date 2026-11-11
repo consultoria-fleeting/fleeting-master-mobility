@@ -57,7 +57,7 @@ function renderizarTexto(descricao: string, destaques?: string[]) {
 export function PeriodicidadeSecao({ itens }: PeriodicidadeSecaoProps) {
   return (
     <div className="bg-card rounded-lg border border-border p-5">
-      <h3 className="text-base font-semibold text-foreground mb-4 flex items-center gap-2">
+      <h3 className="text-base font-bold text-foreground mb-4 flex items-center gap-2">
         <Clock className="w-5 h-5 text-[hsl(var(--accent))]" />
         Periodicidade de Atualização
       </h3>

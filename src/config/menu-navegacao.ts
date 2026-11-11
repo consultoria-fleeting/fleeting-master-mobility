@@ -27,6 +27,7 @@ import {
   Handshake,
   Headset,
   LayoutDashboard,
+  LayoutGrid,
   ReceiptText,
   Satellite,
   Settings2,
@@ -47,6 +48,8 @@ export interface ItemMenuLink {
   icone: LucideIcon;
   path: string;
   destino: DestinoMenu;
+  /** Quando verdadeiro, exibe o item desabilitado e sem ação de clique (ex.: funcionalidades previstas para a V2) */
+  desabilitado?: boolean;
 }
 
 export interface ItemMenuGrupo {
@@ -55,9 +58,11 @@ export interface ItemMenuGrupo {
   id: string;
   label: string;
   icone: LucideIcon;
-  filhos: ItemMenuLink[];
-  /** Mantém o grupo aberto em qualquer rota com este prefixo (ex.: páginas de detalhe) */
+  filhos: ItemMenu[];
+  /** Mantém o grupo aberto por padrão em qualquer rota com este prefixo (ex.: páginas de detalhe) */
   prefixoAtivo?: string;
+  /** Mantém o grupo fechado por padrão quando a rota atual começar com este prefixo */
+  fechadoPorPadraoEm?: string;
 }
 
 export type ItemMenu = ItemMenuLink | ItemMenuGrupo;
@@ -68,24 +73,53 @@ function legado(label: string, path: string, icone: LucideIcon): ItemMenuLink {
 }
 
 /** Atalho para rotas deste projeto */
-function interno(label: string, path: string, icone: LucideIcon): ItemMenuLink {
-  return { tipo: "link", label, path, icone, destino: "interno" };
+function interno(
+  label: string,
+  path: string,
+  icone: LucideIcon,
+  desabilitado = false
+): ItemMenuLink {
+  return { tipo: "link", label, path, icone, destino: "interno", desabilitado };
 }
 
 export const ITENS_MENU: ItemMenu[] = [
-  legado("Painel de Gestão", "/painel-de-gestao/", LayoutDashboard),
-  legado("Help Desk", "/help-desk/", Headset),
-  legado("Inventário", "/inventario/", Boxes),
-  legado("Manutenção", "/manutencao/", Wrench),
-  legado("Sinistros", "/sinistro/", CarFront),
-  legado("Multas e Documentação", "/multas-e-documentacao/", ReceiptText),
-  legado("Telemetria", "/telemetria/", Satellite),
-  legado("Abastecimento", "/abastecimento/", Fuel),
-  legado("Reservas", "/reservas/", CalendarCheck),
   {
     tipo: "grupo",
-    id: "ranking-condutores",
-    label: "Ranking de Condutores",
+    id: "master-mobility",
+    label: "MasterMobility",
+    icone: LayoutGrid,
+    fechadoPorPadraoEm: "/ranking-condutores",
+    filhos: [
+      legado("Painel de Gestão", "/painel-de-gestao/", LayoutDashboard),
+      legado("Help Desk", "/help-desk/", Headset),
+      legado("Inventário", "/inventario/", Boxes),
+      legado("Manutenção", "/manutencao/", Wrench),
+      legado("Sinistros", "/sinistro/", CarFront),
+      legado("Multas e Documentação", "/multas-e-documentacao/", ReceiptText),
+      legado("Telemetria", "/telemetria/", Satellite),
+      legado("Abastecimento", "/abastecimento/", Fuel),
+      legado("Reservas", "/reservas/", CalendarCheck),
+      legado("Treinamentos", "/treinamentos/", GraduationCap),
+      legado("Financeiro", "/financeiro/", Wallet),
+      legado("Checklist", "/checklist/", ClipboardCheck),
+      {
+        tipo: "grupo",
+        id: "cadastros",
+        label: "Cadastros",
+        icone: FolderPlus,
+        filhos: [
+          legado("Veículos", "/cadastros/veiculos/", Car),
+          legado("Fornecedores", "/cadastros/fornecedores/", Handshake),
+          legado("Empresas", "/cadastros/empresas/", Building2),
+          legado("Usuários", "/cadastros/usuarios/", UserCog),
+        ],
+      },
+    ],
+  },
+  {
+    tipo: "grupo",
+    id: "driver-score",
+    label: "DriverScore",
     icone: Trophy,
     prefixoAtivo: "/ranking-condutores",
     filhos: [
@@ -94,22 +128,7 @@ export const ITENS_MENU: ItemMenu[] = [
       interno("Gestão de Exceções", "/ranking-condutores/gestao-excecoes", ShieldAlert),
       interno("Performance dos Condutores", "/ranking-condutores/performance-condutores", Users),
       interno("Matriz de Pontuação", "/ranking-condutores/matriz-pontuacao", Grid3X3),
-      interno("Análises Preditivas", "/ranking-condutores/analises-preditivas", Brain),
-    ],
-  },
-  legado("Treinamentos", "/treinamentos/", GraduationCap),
-  legado("Financeiro", "/financeiro/", Wallet),
-  legado("Checklist", "/checklist/", ClipboardCheck),
-  {
-    tipo: "grupo",
-    id: "cadastros",
-    label: "Cadastros",
-    icone: FolderPlus,
-    filhos: [
-      legado("Veículos", "/cadastros/veiculos/", Car),
-      legado("Fornecedores", "/cadastros/fornecedores/", Handshake),
-      legado("Empresas", "/cadastros/empresas/", Building2),
-      legado("Usuários", "/cadastros/usuarios/", UserCog),
+      interno("Análises Preditivas", "/ranking-condutores/analises-preditivas", Brain, true),
     ],
   },
 ];

@@ -17,6 +17,7 @@
 
 import { Filter } from "lucide-react";
 import { z } from "zod";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { RankingFilterOptions } from "@/hooks/use-ranking-filter-options";
 import type { SelectOption } from "@/types/driver-scoring";
 import type { RankingFiltersState } from "@/types/ranking-filtros";
@@ -29,6 +30,9 @@ const selectSchema = z.string().max(100);
 
 const ESTILO_CONTROLE =
   "text-xs border border-border rounded-md px-3 py-1.5 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed";
+
+const AVISO_FILIAL_OBRIGATORIA =
+  "Selecione uma filial para filtrar por departamento, centro de custo e gestor.";
 
 interface FiltrosHierarquicosProps {
   filtros: RankingFiltersState;
@@ -65,7 +69,7 @@ export function FiltrosHierarquicos({ filtros, opcoes, onChange }: FiltrosHierar
   }
 
   return (
-    <div className="bg-card rounded-lg border border-border p-4 flex flex-wrap items-center gap-3">
+    <div className="sticky top-2 z-20 bg-card/95 backdrop-blur-sm rounded-lg border border-border p-4 shadow-sm flex flex-wrap items-center gap-3">
       <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
 
       <input
@@ -104,6 +108,7 @@ export function FiltrosHierarquicos({ filtros, opcoes, onChange }: FiltrosHierar
         valor={filtros.departmentId}
         consulta={opcoes.departments}
         desabilitado={semFilial}
+        motivoDesabilitado={AVISO_FILIAL_OBRIGATORIA}
         onChange={(valor) => handleSelectChange("departmentId", valor)}
       />
 
@@ -114,6 +119,7 @@ export function FiltrosHierarquicos({ filtros, opcoes, onChange }: FiltrosHierar
         valor={filtros.costCenterId}
         consulta={opcoes.costCenters}
         desabilitado={semFilial}
+        motivoDesabilitado={AVISO_FILIAL_OBRIGATORIA}
         onChange={(valor) => handleSelectChange("costCenterId", valor)}
       />
 
@@ -124,14 +130,9 @@ export function FiltrosHierarquicos({ filtros, opcoes, onChange }: FiltrosHierar
         valor={filtros.managerId}
         consulta={opcoes.managers}
         desabilitado={semFilial}
+        motivoDesabilitado={AVISO_FILIAL_OBRIGATORIA}
         onChange={(valor) => handleSelectChange("managerId", valor)}
       />
-
-      {semFilial && (
-        <p className="text-[11px] text-muted-foreground">
-          Selecione uma filial para filtrar por departamento, centro de custo e gestor.
-        </p>
-      )}
     </div>
   );
 }
@@ -145,10 +146,11 @@ interface FiltroSelectProps {
   valor: string;
   consulta: { data: SelectOption[] | undefined; isLoading: boolean; error: unknown };
   desabilitado?: boolean;
+  motivoDesabilitado?: string;
   onChange: (valor: string) => void;
 }
 
-/** Select alimentado por uma consulta da API, com textos de "Carregando..." e erro. */
+/** Select alimentado por uma consulta da API, com textos de "Carregando...", erro e tooltip quando desabilitado. */
 function FiltroSelect({
   id,
   rotulo,
@@ -156,6 +158,7 @@ function FiltroSelect({
   valor,
   consulta,
   desabilitado = false,
+  motivoDesabilitado,
   onChange,
 }: FiltroSelectProps) {
   const opcoes = consulta.data ?? [];
@@ -165,7 +168,7 @@ function FiltroSelect({
       ? "Carregando..."
       : placeholder;
 
-  return (
+  const select = (
     <select
       id={id}
       value={valor}
@@ -181,5 +184,23 @@ function FiltroSelect({
         </option>
       ))}
     </select>
+  );
+
+  if (!desabilitado || !motivoDesabilitado) {
+    return select;
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={<span tabIndex={0} aria-label={`${rotulo}: ${motivoDesabilitado}`} />}
+        className="inline-block rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {select}
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-xs text-xs">
+        {motivoDesabilitado}
+      </TooltipContent>
+    </Tooltip>
   );
 }

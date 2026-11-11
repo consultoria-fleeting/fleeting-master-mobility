@@ -14,7 +14,6 @@
 
 "use client";
 
-import { useState } from "react";
 import { useParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { DriverEventsTable } from "@/components/driver-performance/driver-events-table";
@@ -25,7 +24,7 @@ import { PeriodoSelector } from "@/components/periodo-selector";
 import { ListSkeleton, QueryState } from "@/components/query-state";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useApiQuery } from "@/hooks/use-api-query";
-import { NOMES_MESES } from "@/hooks/use-ranking-page-filters";
+import { usePeriodoUrl } from "@/hooks/use-ranking-page-filters";
 import { useResettablePage } from "@/hooks/use-resettable-page";
 import { getDriverPerformanceDetail } from "@/services/driver-scoring.service";
 import type { DriverPerformanceDriver } from "@/types/driver-scoring";
@@ -70,11 +69,14 @@ export default function PerformanceCondutorPage() {
   const params = useParams<{ id: string }>();
   const identifier = params.id;
 
-  /* ---------- Período (mês opcional: "" = todos os meses fechados) ---------- */
-  const hoje = new Date();
-  const [mesSelecionado, setMesSelecionado] = useState(NOMES_MESES[hoje.getMonth()]);
-  const [anoSelecionado, setAnoSelecionado] = useState(hoje.getFullYear());
-  const mesNumero = mesSelecionado ? NOMES_MESES.indexOf(mesSelecionado) + 1 : undefined;
+  /* ---------- Período sincronizado com a URL (mês opcional: "" = todos os meses) ---------- */
+  const {
+    mesSelecionado,
+    setMesSelecionado,
+    anoSelecionado,
+    setAnoSelecionado,
+    mesNumero,
+  } = usePeriodoUrl({ permitirTodosMeses: true });
 
   const [pagina, setPagina] = useResettablePage(
     JSON.stringify({ identifier, anoSelecionado, mesNumero }),
@@ -136,7 +138,9 @@ export default function PerformanceCondutorPage() {
           <Tabs defaultValue="ranking" className="w-full flex-col">
             <TabsList>
               <TabsTrigger value="ranking">Ranking</TabsTrigger>
-              <TabsTrigger value="preditiva">Análise Preditiva</TabsTrigger>
+              <TabsTrigger value="preditiva" disabled title="Disponível na V2">
+                Análise Preditiva
+              </TabsTrigger>
             </TabsList>
 
             {/* ==================== ABA RANKING ==================== */}

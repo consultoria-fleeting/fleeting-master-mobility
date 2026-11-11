@@ -1,12 +1,11 @@
 import type { ClassificationCount } from "@/types/driver-scoring";
-import { getClassificationStyle } from "@/utils/driver-scoring-helpers";
+import { getClassificationStyle, type ClassificationLevel } from "@/utils/driver-scoring-helpers";
 
 /**
  * Transformação dos dados de classificação da API em dados para os gráficos de barras.
  *
- * As classificações são dinâmicas por organização (ex.: "Referência", "Baixa Exposição ao Risco"),
- * então as séries do gráfico são montadas a partir dos próprios dados retornados.
- * Usamos chaves seguras (`c0`, `c1`...) no `dataKey`, pois o Recharts interpreta "." como caminho.
+ * Padroniza as 4 séries na ordem e nomenclatura do Lovable (`Ref.`, `Baixa`, `Média`, `Alta`),
+ * mapeando os labels dinâmicos retornados pela API pelo seu nível semântico.
  */
 
 /** Item de entrada: um grupo (unidade, mês etc.) com suas contagens por classificação. */
@@ -24,13 +23,20 @@ export interface ClassificationSeries {
 }
 
 export interface ClassificationChartData {
-  /** Uma linha por grupo: `{ name, c0, c1, ... }`. */
+  /** Uma linha por grupo: `{ name, referencia, baixa, media, alta }`. */
   rows: Record<string, string | number>[];
   series: ClassificationSeries[];
 }
 
+const LEVELS_PADRAO: { level: Exclude<ClassificationLevel, "desconhecida">; nome: string }[] = [
+  { level: "referencia", nome: "Ref." },
+  { level: "baixa", nome: "Baixa" },
+  { level: "media", nome: "Média" },
+  { level: "alta", nome: "Alta" },
+];
+
 /**
- * Monta linhas e séries do gráfico.
+ * Monta linhas e séries do gráfico sempre na ordem: Ref., Baixa, Média e Alta.
  * @param groups Grupos retornados pela API.
  * @param stackId Se informado, as séries ficam empilhadas.
  */
@@ -38,27 +44,29 @@ export function buildClassificationChartData(
   groups: ClassificationGroup[],
   stackId?: string,
 ): ClassificationChartData {
-  // Ordem das séries = ordem das classificações da API (melhor -> pior).
-  const labels: string[] = [];
-  for (const group of groups) {
-    for (const { label } of group.classifications) {
-      if (!labels.includes(label)) labels.push(label);
-    }
-  }
-
   const rows = groups.map((group) => {
-    const row: Record<string, string | number> = { name: group.name };
-    labels.forEach((label, index) => {
-      const found = group.classifications.find((item) => item.label === label);
-      row[`c${index}`] = found?.count ?? 0;
-    });
+    const row: Record<string, string | number> = {
+      name: group.name,
+      referencia: 0,
+      baixa: 0,
+      media: 0,
+      alta: 0,
+    };
+
+    for (const item of group.classifications) {
+      const { level } = getClassificationStyle(item.label);
+      if (level !== "desconhecida") {
+        row[level] = (Number(row[level]) || 0) + item.count;
+      }
+    }
+
     return row;
   });
 
-  const series = labels.map((label, index) => ({
-    dataKey: `c${index}`,
-    nome: label,
-    cor: getClassificationStyle(label).color,
+  const series: ClassificationSeries[] = LEVELS_PADRAO.map(({ level, nome }) => ({
+    dataKey: level,
+    nome,
+    cor: getClassificationStyle(level).color,
     stackId,
   }));
 

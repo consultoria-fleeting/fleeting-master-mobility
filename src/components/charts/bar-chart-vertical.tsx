@@ -105,7 +105,7 @@ export function BarChartVertical({
         <YAxis tick={{ fontSize: 11 }} domain={dominioY} />
         <Tooltip />
         {mostrarLegenda && (
-          <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
+          <Legend itemSorter={null} iconSize={10} wrapperStyle={{ fontSize: 11 }} />
         )}
         {series.map((serie) => (
           <Bar

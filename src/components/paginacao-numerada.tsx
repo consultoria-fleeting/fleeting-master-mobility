@@ -18,6 +18,11 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { z } from "zod";
+
+export const OPCOES_ITENS_POR_PAGINA_PADRAO = [10, 25, 50, 100] as const;
+
+const limitePaginaSchema = z.coerce.number().int().min(1).max(100);
 
 interface PaginacaoNumeradaProps {
   pagina: number;
@@ -28,6 +33,12 @@ interface PaginacaoNumeradaProps {
   rotuloItens?: string;
   /** Desabilita os botões enquanto a página está carregando. */
   desabilitado?: boolean;
+  /** Mantém a barra visível mesmo quando houver apenas 1 página. */
+  mostrarSempre?: boolean;
+  /** Opções de quantidade de itens por página (ex.: `[10, 25, 50, 100]`). */
+  opcoesItensPorPagina?: readonly number[];
+  /** Quando informado, exibe o seletor para alterar a quantidade de itens por página. */
+  onItensPorPaginaChange?: (itensPorPagina: number) => void;
   onPaginaChange: (pagina: number) => void;
 }
 
@@ -57,63 +68,97 @@ export function PaginacaoNumerada({
   itensPorPagina,
   rotuloItens = "registros",
   desabilitado = false,
+  mostrarSempre = false,
+  opcoesItensPorPagina = OPCOES_ITENS_POR_PAGINA_PADRAO,
+  onItensPorPaginaChange,
   onPaginaChange,
 }: PaginacaoNumeradaProps) {
-  if (totalPaginas <= 1) return null;
+  const exibirSeletorLimite = Boolean(onItensPorPaginaChange && opcoesItensPorPagina.length > 0);
+  if (totalItens === 0 || (totalPaginas <= 1 && !mostrarSempre && !exibirSeletorLimite)) return null;
 
   const inicio = (pagina - 1) * itensPorPagina + 1;
   const fim = Math.min(pagina * itensPorPagina, totalItens);
   const estiloSeta =
     "p-1.5 rounded-md hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors";
 
+  function handleLimiteChange(valor: string) {
+    if (!onItensPorPaginaChange) return;
+    const resultado = limitePaginaSchema.safeParse(valor);
+    if (resultado.success && opcoesItensPorPagina.includes(resultado.data)) {
+      onItensPorPaginaChange(resultado.data);
+    }
+  }
+
   return (
-    <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4 pt-4 border-t border-border">
       <p className="text-xs text-muted-foreground">
         Exibindo {inicio}–{fim} de {totalItens} {rotuloItens}
       </p>
 
-      <div className="flex items-center gap-1">
-        <button
-          type="button"
-          onClick={() => onPaginaChange(Math.max(1, pagina - 1))}
-          disabled={pagina === 1 || desabilitado}
-          className={estiloSeta}
-          aria-label="Página anterior"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-
-        {gerarNumerosPagina(pagina, totalPaginas).map((item, indice) =>
-          item === "..." ? (
-            <span key={`reticencias-${indice}`} className="px-1 text-muted-foreground text-xs">
-              …
-            </span>
-          ) : (
-            <button
-              type="button"
-              key={item}
-              onClick={() => onPaginaChange(item)}
+      <div className="flex flex-wrap items-center gap-2">
+        {exibirSeletorLimite && (
+          <>
+            <select
+              id="select-itens-por-pagina"
+              value={itensPorPagina}
+              onChange={(e) => handleLimiteChange(e.target.value)}
               disabled={desabilitado}
-              className={`w-8 h-8 rounded-md text-xs font-medium transition-colors ${
-                item === pagina ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-              }`}
-              aria-label={`Página ${item}`}
-              aria-current={item === pagina ? "page" : undefined}
+              aria-label="Itens por página"
+              className="h-8 text-xs font-medium border border-border rounded-md px-2.5 bg-background text-foreground hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             >
-              {item}
-            </button>
-          ),
+              {opcoesItensPorPagina.map((opcao) => (
+                <option key={opcao} value={opcao}>
+                  {opcao} por página
+                </option>
+              ))}
+            </select>
+            <span className="h-4 w-px bg-border" aria-hidden="true" />
+          </>
         )}
 
-        <button
-          type="button"
-          onClick={() => onPaginaChange(Math.min(totalPaginas, pagina + 1))}
-          disabled={pagina === totalPaginas || desabilitado}
-          className={estiloSeta}
-          aria-label="Próxima página"
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onPaginaChange(Math.max(1, pagina - 1))}
+            disabled={pagina === 1 || desabilitado}
+            className={estiloSeta}
+            aria-label="Página anterior"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+
+          {gerarNumerosPagina(pagina, totalPaginas).map((item, indice) =>
+            item === "..." ? (
+              <span key={`reticencias-${indice}`} className="px-1 text-muted-foreground text-xs">
+                …
+              </span>
+            ) : (
+              <button
+                type="button"
+                key={item}
+                onClick={() => onPaginaChange(item)}
+                disabled={desabilitado}
+                className={`w-8 h-8 rounded-md text-xs font-medium transition-colors ${
+                  item === pagina ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                }`}
+                aria-label={`Página ${item}`}
+                aria-current={item === pagina ? "page" : undefined}
+              >
+                {item}
+              </button>
+            ),
+          )}
+
+          <button
+            type="button"
+            onClick={() => onPaginaChange(Math.min(totalPaginas, pagina + 1))}
+            disabled={pagina === totalPaginas || desabilitado}
+            className={estiloSeta}
+            aria-label="Próxima página"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
   );

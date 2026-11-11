@@ -66,7 +66,7 @@ export function FiltroBarra({
   }
 
   return (
-    <div className="bg-card rounded-lg border border-border p-4 flex flex-wrap items-center gap-3">
+    <div className="sticky top-2 z-20 bg-card/95 backdrop-blur-sm rounded-lg border border-border p-4 shadow-sm flex flex-wrap items-center gap-3">
       <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
 
       <input

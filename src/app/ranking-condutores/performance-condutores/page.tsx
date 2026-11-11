@@ -18,16 +18,13 @@ import { useRankingPageFilters } from "@/hooks/use-ranking-page-filters";
 
 export default function PerformanceCondutoresPage() {
   const {
-    mesSelecionado,
-    setMesSelecionado,
     anoSelecionado,
     setAnoSelecionado,
-    mesNumero,
     filtros,
     setFiltros,
     opcoesFiltro,
     filtrosApi,
-  } = useRankingPageFilters();
+  } = useRankingPageFilters({ apenasAno: true });
 
   return (
     <div className="animate-fade-in p-4 lg:p-6 space-y-6">
@@ -39,16 +36,15 @@ export default function PerformanceCondutoresPage() {
         </div>
 
         <PeriodoSelector
-          mesSelecionado={mesSelecionado}
           anoSelecionado={anoSelecionado}
-          onMesChange={setMesSelecionado}
           onAnoChange={setAnoSelecionado}
+          ocultarMes
         />
       </div>
 
       <FiltrosHierarquicos filtros={filtros} opcoes={opcoesFiltro} onChange={setFiltros} />
 
-      <DriverPerformanceReport ano={anoSelecionado} mes={mesNumero} filtros={filtrosApi} />
+      <DriverPerformanceReport ano={anoSelecionado} filtros={filtrosApi} />
     </div>
   );
 }

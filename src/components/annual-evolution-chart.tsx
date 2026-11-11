@@ -43,7 +43,7 @@ export function AnnualEvolutionChart({ ano, filtros }: AnnualEvolutionChartProps
 
   return (
     <div className="bg-card rounded-lg border border-border p-5">
-      <h4 className="text-sm font-semibold mb-4 flex items-center gap-2">
+      <h4 className="text-sm font-bold mb-4 flex items-center gap-2">
         Evolução do Comportamento — Ano
         <InfoTooltip texto="Grau de exposição ao risco por mês: evolução anual da distribuição dos condutores por classificação. Considera apenas meses já encerrados." />
       </h4>

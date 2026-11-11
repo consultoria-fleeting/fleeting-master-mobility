@@ -90,17 +90,17 @@ export function ParameterDetailsTable({
         </p>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+          <table className="w-full min-w-[960px] text-xs">
             <thead>
               <tr className="border-b text-muted-foreground">
-                <th className="text-left py-2 px-2">Data</th>
-                <th className="text-left py-2">Condutor</th>
-                <th className="text-left py-2">Gestor</th>
-                <th className="text-left py-2">Regional</th>
-                <th className="text-left py-2">C. Custo</th>
-                <th className="text-left py-2">Departamento</th>
-                <th className="text-left py-2">Unidade</th>
-                <th className="text-right py-2 px-2">Classificação</th>
+                <th className="text-left py-2.5 px-3 whitespace-nowrap">Data</th>
+                <th className="text-left py-2.5 px-3 whitespace-nowrap">Condutor</th>
+                <th className="text-left py-2.5 px-3 whitespace-nowrap">Gestor</th>
+                <th className="text-left py-2.5 px-3 whitespace-nowrap">Regional</th>
+                <th className="text-left py-2.5 px-3 whitespace-nowrap">C. Custo</th>
+                <th className="text-left py-2.5 px-3 whitespace-nowrap">Departamento</th>
+                <th className="text-left py-2.5 px-3 whitespace-nowrap">Unidade</th>
+                <th className="text-right py-2.5 px-3 whitespace-nowrap">Classificação</th>
               </tr>
             </thead>
             <tbody>
@@ -109,16 +109,16 @@ export function ParameterDetailsTable({
                   key={`${linha.date}-${linha.driver_name}-${indice}`}
                   className="border-b last:border-0 hover:bg-muted/50 transition-colors"
                 >
-                  <td className="py-2 px-2 whitespace-nowrap">{formatDate(linha.date)}</td>
-                  <td className="py-2 font-medium whitespace-nowrap">{linha.driver_name}</td>
-                  <td className="py-2 text-muted-foreground whitespace-nowrap">
+                  <td className="py-2.5 px-3 whitespace-nowrap">{formatDate(linha.date)}</td>
+                  <td className="py-2.5 px-3 font-medium whitespace-nowrap">{linha.driver_name}</td>
+                  <td className="py-2.5 px-3 text-muted-foreground whitespace-nowrap">
                     {displayValue(linha.manager_name)}
                   </td>
-                  <td className="py-2 text-muted-foreground">{displayValue(linha.regional)}</td>
-                  <td className="py-2 text-muted-foreground">{displayValue(linha.cost_center)}</td>
-                  <td className="py-2 text-muted-foreground">{displayValue(linha.department)}</td>
-                  <td className="py-2 text-muted-foreground">{displayValue(linha.unit)}</td>
-                  <td className="py-2 px-2 text-right">
+                  <td className="py-2.5 px-3 text-muted-foreground whitespace-nowrap">{displayValue(linha.regional)}</td>
+                  <td className="py-2.5 px-3 text-muted-foreground whitespace-nowrap">{displayValue(linha.cost_center)}</td>
+                  <td className="py-2.5 px-3 text-muted-foreground whitespace-nowrap">{displayValue(linha.department)}</td>
+                  <td className="py-2.5 px-3 text-muted-foreground whitespace-nowrap">{displayValue(linha.unit)}</td>
+                  <td className="py-2.5 px-3 text-right whitespace-nowrap">
                     <ClassificationLabelBadge label={linha.classification} />
                   </td>
                 </tr>

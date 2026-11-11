@@ -7,16 +7,24 @@ import type {
   DriverClassificationFilter,
   ExposureLevelBucket,
 } from "@/types/driver-scoring";
+import { getCurrentPeriod, parsePeriodSearchParams } from "@/utils/ranking-filtros";
 import { sanitizeParams } from "@/utils/sanitize-params";
 
 /**
  * Lê e valida os query params da tela de detalhe de um parâmetro.
+ * Aceita `month`/`mes` (número ou nome do mês) e `year`/`ano`, além dos filtros hierárquicos.
  * Ids que não forem UUID válido são descartados.
  */
 export function parseParameterDetailsSearchParams(
   searchParams: URLSearchParams,
 ): ParameterDetailsSearchParams {
-  return parameterDetailsSearchParamsSchema.parse(Object.fromEntries(searchParams.entries()));
+  const base = parameterDetailsSearchParamsSchema.parse(Object.fromEntries(searchParams.entries()));
+  const periodo = parsePeriodSearchParams(searchParams);
+  return {
+    ...base,
+    year: periodo.ano,
+    month: periodo.mesNumero ?? getCurrentPeriod().mesNumero,
+  };
 }
 
 /** Monta a query string para navegar do card de um parâmetro até o seu detalhe, preservando o contexto. */

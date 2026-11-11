@@ -22,7 +22,7 @@ function formatarFator(fator: number): string {
 export function FatoresQuilometragem({ fatores }: FatoresQuilometragemProps) {
   return (
     <div className="bg-card rounded-lg border border-border p-5">
-      <h3 className="text-base font-semibold text-foreground mb-4">Fatores de Quilometragem</h3>
+      <h3 className="text-base font-bold text-foreground mb-4">Fatores de Quilometragem</h3>
 
       <div className="overflow-x-auto">
         <table className="w-full text-xs">

@@ -19,7 +19,6 @@ import { getRankingParameters } from "@/services/driver-scoring.service";
 import type {
   DashboardHierarchyFilters,
   ExposureLevelBucket,
-  RankingParameterEvent,
 } from "@/types/driver-scoring";
 import { EXPOSURE_LEVELS, getEventTypeIcon } from "@/utils/driver-scoring-display";
 import { resolveEventLabel } from "@/utils/driver-scoring-helpers";
@@ -32,8 +31,40 @@ interface RankingParametersCardsProps {
   filtros: DashboardHierarchyFilters;
 }
 
+/**
+ * Grupos visuais de cards na tela de Parâmetros do Ranking (padrão Lovable):
+ * 1. Roxo: mais críticos (`CRITICAL`)
+ * 2. Vermelho: alta/média exposição (`HIGH`)
+ * 3. Amarelo: demais parâmetros (`MEDIUM` e `LOW` unificados no mesmo bloco)
+ */
+const VISUAL_GROUPS: {
+  id: string;
+  levels: ExposureLevelBucket[];
+  bgClassName: string;
+  textClassName: string;
+}[] = [
+  {
+    id: "critico",
+    levels: ["CRITICAL"],
+    bgClassName: "bg-[#9B23AB]",
+    textClassName: "text-white",
+  },
+  {
+    id: "alto",
+    levels: ["HIGH"],
+    bgClassName: "bg-[#FF0000]",
+    textClassName: "text-white",
+  },
+  {
+    id: "demais",
+    levels: ["MEDIUM", "LOW"],
+    bgClassName: "bg-[#EEDA2B]",
+    textClassName: "text-black",
+  },
+];
+
 /** Ordena do evento com mais ocorrências para o com menos (sem alterar o array original). */
-function sortByTotalDesc(events: RankingParameterEvent[]): RankingParameterEvent[] {
+function sortByTotalDesc<T extends { total: number }>(events: T[]): T[] {
   return [...events].sort((a, b) => b.total - a.total);
 }
 
@@ -65,31 +96,31 @@ export function RankingParametersCards({ ano, mes, filtros }: RankingParametersC
       skeleton={<ListSkeleton linhas={6} />}
     >
       <div className="space-y-6">
-        {EXPOSURE_LEVELS.map(({ level, label, bgClassName, textClassName }) => {
-          const events = sortByTotalDesc(data?.[level] ?? []);
+        {VISUAL_GROUPS.map(({ id, levels, bgClassName, textClassName }) => {
+          const events = sortByTotalDesc(
+            levels.flatMap((level) =>
+              (data?.[level] ?? []).map((event) => ({ ...event, level })),
+            ),
+          );
           if (events.length === 0) return null;
 
           return (
-            <section key={level} className="space-y-3" aria-label={label}>
-              <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <span className={`inline-block w-3 h-3 rounded-sm ${bgClassName}`} aria-hidden="true" />
-                {label}
-              </h2>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {events.map((event) => (
-                  <ParametroCard
-                    key={event.event_type}
-                    label={resolveEventLabel(event.label, event.event_type)}
-                    total={event.total}
-                    icone={getEventTypeIcon(event.event_type)}
-                    bgClasse={bgClassName}
-                    textoClasse={textClassName}
-                    onClick={() => handleCardClick(event.event_type, level)}
-                  />
-                ))}
-              </div>
-            </section>
+            <div
+              key={id}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+            >
+              {events.map((event) => (
+                <ParametroCard
+                  key={event.event_type}
+                  label={resolveEventLabel(event.label, event.event_type)}
+                  total={event.total}
+                  icone={getEventTypeIcon(event.event_type)}
+                  bgClasse={bgClassName}
+                  textoClasse={textClassName}
+                  onClick={() => handleCardClick(event.event_type, event.level)}
+                />
+              ))}
+            </div>
           );
         })}
       </div>

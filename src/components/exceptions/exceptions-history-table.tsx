@@ -76,7 +76,7 @@ export function ExceptionsHistoryTable() {
   return (
     <div className="bg-card rounded-lg border border-border p-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <h3 className="text-base font-semibold text-foreground">Histórico</h3>
+        <h3 className="text-base font-bold text-foreground">Histórico</h3>
 
         <div className="relative w-full sm:w-72">
           <Search

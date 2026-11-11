@@ -27,7 +27,7 @@ export function DriverMonthlyScoresChart({ scores }: DriverMonthlyScoresChartPro
 
   return (
     <div className="bg-card rounded-lg border border-border p-5">
-      <h3 className="text-base font-semibold text-foreground mb-4">Pontuações Mensais</h3>
+      <h3 className="text-base font-bold text-foreground mb-4">Pontuações Mensais</h3>
       <BarChartVertical
         dados={rows}
         categoriaKey="mes"

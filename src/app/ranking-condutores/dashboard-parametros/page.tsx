@@ -1,13 +1,9 @@
 /**
  * Parâmetros do Ranking — Página
  *
- * Integrada ao backend `api-driver-scoring` (seções 4.7, 4.8 e 4.10 da spec):
+ * Integrada ao backend `api-driver-scoring` (seção 4.7 da spec):
  * - Seletor de período (mês/ano) e filtros hierárquicos em cascata
- * - Cards de eventos por nível de exposição (4.7) — clique abre o detalhe (4.9)
- * - Gráfico de fadiga aguda × acumulada (4.10)
- * - Gráfico de volume de eventos por tipo (4.8)
- *
- * Cada seção busca seus próprios dados e trata loading/erro/vazio de forma independente.
+ * - Cards de eventos agrupados em 3 faixas de cores (Roxo, Vermelho e Amarelo) — clique abre o detalhe (4.9)
  *
  * Rota: /ranking-condutores/dashboard-parametros
  */
@@ -16,8 +12,6 @@
 
 import Link from "next/link";
 import { ListChecks } from "lucide-react";
-import { EventsVolumeChart } from "@/components/events-volume-chart";
-import { FatigueDistributionChart } from "@/components/fatigue-distribution-chart";
 import { FiltrosHierarquicos } from "@/components/filtros-hierarquicos";
 import { PeriodoSelector } from "@/components/periodo-selector";
 import { RankingParametersCards } from "@/components/ranking-parameters-cards";
@@ -78,10 +72,6 @@ export default function DashboardParametrosPage() {
 
       {/* Cards agrupados por nível de exposição (4.7) */}
       <RankingParametersCards ano={anoSelecionado} mes={mesNumero} filtros={filtrosApi} />
-
-      {/* Gráficos */}
-      <FatigueDistributionChart ano={anoSelecionado} mes={mesNumero} filtros={filtrosApi} />
-      <EventsVolumeChart ano={anoSelecionado} mes={mesNumero} filtros={filtrosApi} />
     </div>
   );
 }

@@ -45,7 +45,7 @@ export function EventsVolumeChart({ ano, mes, filtros }: EventsVolumeChartProps)
 
   return (
     <div className="bg-card rounded-lg border border-border p-5">
-      <h4 className="text-sm font-semibold mb-4 flex items-center gap-2">
+      <h4 className="text-sm font-bold mb-4 flex items-center gap-2">
         Quantidade de Eventos por Parâmetro do Ranking
         <InfoTooltip texto="Total de eventos registrados para cada parâmetro do ranking no período selecionado." />
       </h4>

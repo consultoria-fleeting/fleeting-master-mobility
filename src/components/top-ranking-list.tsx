@@ -71,7 +71,7 @@ export function TopRankingList({
 }: TopRankingListProps) {
   return (
     <div className="bg-card rounded-lg border border-border p-5">
-      <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+      <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
         <Icone className={`w-4 h-4 ${corIcone}`} />
         {titulo}
         <InfoTooltip texto={descricao} />

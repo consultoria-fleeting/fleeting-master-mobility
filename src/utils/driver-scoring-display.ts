@@ -65,17 +65,17 @@ export function getDynamicGroupName(
 // Níveis de exposição, ícones e severidade
 // ---------------------------------------------------------------------------
 
-/** Níveis de exposição do endpoint 4.7, do mais grave ao mais leve, com título e cores (Tailwind). */
+/** Níveis de exposição do endpoint 4.7, do mais grave ao mais leve, seguindo as 3 cores do Lovable (Roxo, Vermelho e Amarelo). */
 export const EXPOSURE_LEVELS: {
   level: ExposureLevelBucket;
   label: string;
   bgClassName: string;
   textClassName: string;
 }[] = [
-  { level: "CRITICAL", label: "Exposição Crítica", bgClassName: "bg-red-600", textClassName: "text-white" },
-  { level: "HIGH", label: "Alta Exposição", bgClassName: "bg-[#9B23AB]", textClassName: "text-white" },
-  { level: "MEDIUM", label: "Média Exposição", bgClassName: "bg-[#FF0000]", textClassName: "text-white" },
-  { level: "LOW", label: "Baixa Exposição", bgClassName: "bg-[#EEDA2B]", textClassName: "text-black" },
+  { level: "CRITICAL", label: "Alta Exposição ao Risco", bgClassName: "bg-[#9B23AB]", textClassName: "text-white" },
+  { level: "HIGH", label: "Média Exposição", bgClassName: "bg-[#FF0000]", textClassName: "text-white" },
+  { level: "MEDIUM", label: "Baixa Exposição / Referência", bgClassName: "bg-[#EEDA2B]", textClassName: "text-black" },
+  { level: "LOW", label: "Baixa Exposição / Referência", bgClassName: "bg-[#EEDA2B]", textClassName: "text-black" },
 ];
 
 /** Regras (a primeira que casar vence) para escolher o ícone do card de um evento. */

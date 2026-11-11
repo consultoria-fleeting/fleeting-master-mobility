@@ -65,9 +65,9 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
   /** Rotas do Ranking de Condutores exibem a marca DriverScore no menu expandido */
   const ehRankingCondutores = pathname.startsWith("/ranking-condutores");
 
-  /** Verifica se um link interno está ativo (match exato ou prefixo). Links do legado nunca estão ativos aqui. */
+  /** Verifica se um link interno está ativo (match exato ou prefixo). Links do legado ou desabilitados nunca estão ativos aqui. */
   function estaAtivo(item: ItemMenuLink): boolean {
-    if (item.destino === "legado") return false;
+    if (item.destino === "legado" || item.desabilitado) return false;
     const path = item.path.replace(/\/+$/, "");
     const atual = pathname.replace(/\/+$/, "");
     // O dashboard do ranking é a raiz dos módulos: só fica ativo na rota exata
@@ -77,11 +77,20 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
 
   function grupoContemRotaAtual(grupo: ItemMenuGrupo): boolean {
     if (grupo.prefixoAtivo && pathname.startsWith(grupo.prefixoAtivo)) return true;
-    return grupo.filhos.some(estaAtivo);
+    return grupo.filhos.some((filho) =>
+      filho.tipo === "grupo" ? grupoContemRotaAtual(filho) : estaAtivo(filho)
+    );
+  }
+
+  function grupoAbertoPorPadrao(grupo: ItemMenuGrupo): boolean {
+    if (grupo.fechadoPorPadraoEm) {
+      return !pathname.startsWith(grupo.fechadoPorPadraoEm);
+    }
+    return grupoContemRotaAtual(grupo);
   }
 
   function grupoEstaAberto(grupo: ItemMenuGrupo): boolean {
-    return gruposAbertos[grupo.id] ?? grupoContemRotaAtual(grupo);
+    return gruposAbertos[grupo.id] ?? grupoAbertoPorPadrao(grupo);
   }
 
   function alternarGrupo(grupo: ItemMenuGrupo) {
@@ -94,13 +103,20 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
     setGruposAbertos((atual) => ({ ...atual, [grupo.id]: !grupoEstaAberto(grupo) }));
   }
 
+  function obterRecuoNivel(nivel: number): string {
+    if (colapsado || nivel === 0) return "px-3";
+    if (nivel === 1) return "pl-6 pr-3";
+    return "pl-10 pr-3";
+  }
+
   /** Renderiza um link (interno com next/link; legado com <a> e URL do ambiente atual) */
-  function renderizarLink(item: ItemMenuLink, subItem = false) {
+  function renderizarLink(item: ItemMenuLink, nivel = 0) {
     const ativo = estaAtivo(item);
+    const subItem = nivel > 0;
     const Icone = item.icone;
     const classes = `
       ${CLASSE_ITEM_BASE} py-2.5
-      ${subItem && !colapsado ? "pl-6 pr-3" : "px-3"}
+      ${obterRecuoNivel(nivel)}
       ${ativo ? CLASSE_ITEM_ATIVO : CLASSE_ITEM_INATIVO}
     `;
     const conteudo = (
@@ -111,6 +127,23 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
         )}
       </>
     );
+
+    if (item.desabilitado) {
+      return (
+        <span
+          key={item.path}
+          aria-disabled="true"
+          title={colapsado ? `${item.label} (Disponível na V2)` : "Disponível na V2"}
+          className={`
+            ${CLASSE_ITEM_BASE} py-2.5
+            ${obterRecuoNivel(nivel)}
+            opacity-40 cursor-not-allowed select-none
+          `}
+        >
+          {conteudo}
+        </span>
+      );
+    }
 
     if (item.destino === "legado") {
       return (
@@ -140,9 +173,10 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
   }
 
   /** Renderiza um grupo expansível (o título não é clicável como link, só abre/fecha) */
-  function renderizarGrupo(grupo: ItemMenuGrupo) {
+  function renderizarGrupo(grupo: ItemMenuGrupo, nivel = 0) {
     const aberto = grupoEstaAberto(grupo);
     const contemAtivo = grupoContemRotaAtual(grupo);
+    const subGrupo = nivel > 0;
     const Icone = grupo.icone;
 
     return (
@@ -153,15 +187,18 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
           aria-expanded={aberto}
           title={colapsado ? grupo.label : undefined}
           className={`
-            ${CLASSE_ITEM_BASE} w-full px-3 py-2.5
+            ${CLASSE_ITEM_BASE} w-full py-2.5
+            ${obterRecuoNivel(nivel)}
             ${contemAtivo ? "opacity-100 font-semibold" : CLASSE_ITEM_INATIVO}
             hover:bg-[hsl(var(--sidebar-accent)/0.3)]
           `}
         >
-          <Icone className="w-5 h-5 shrink-0" />
+          <Icone className={`${subGrupo ? "w-4 h-4" : "w-5 h-5"} shrink-0`} />
           {!colapsado && (
             <>
-              <span className="truncate text-left flex-1">{grupo.label}</span>
+              <span className={`truncate text-left flex-1 ${subGrupo ? "text-[13px]" : ""}`}>
+                {grupo.label}
+              </span>
               <ChevronDown
                 className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${aberto ? "rotate-180" : ""}`}
               />
@@ -171,7 +208,11 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
 
         {aberto && !colapsado && (
           <div className="mt-1 space-y-1">
-            {grupo.filhos.map((filho) => renderizarLink(filho, true))}
+            {grupo.filhos.map((filho) =>
+              filho.tipo === "grupo"
+                ? renderizarGrupo(filho, nivel + 1)
+                : renderizarLink(filho, nivel + 1)
+            )}
           </div>
         )}
       </div>

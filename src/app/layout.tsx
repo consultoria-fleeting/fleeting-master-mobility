@@ -1,15 +1,14 @@
 import type { Metadata } from "next";
-import { Inter, Geist, Poppins } from "next/font/google";
+import { Inter, Poppins } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppSidebar } from "@/components/app-sidebar";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
-
 const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-inter",
+  weight: ["300", "400", "500", "600", "700", "800"],
+  variable: "--font-sans",
   display: "swap",
 });
 
@@ -33,7 +32,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning className={cn("h-full", "antialiased", inter.variable, "font-sans", geist.variable, poppins.variable)}>
+    <html lang="pt-BR" suppressHydrationWarning className={cn("h-full", "antialiased", inter.variable, "font-sans", poppins.variable)}>
       <body className="h-full font-sans">
         <TooltipProvider delay={200}>
           <AppSidebar>{children}</AppSidebar>

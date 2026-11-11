@@ -24,8 +24,8 @@ import { getDynamicGroupName } from "@/utils/driver-scoring-display";
 const CHART_HEIGHT = 250;
 
 const SERIES = [
-  { dataKey: "aguda", nome: "Fadiga Aguda (> 650 km/dia)", cor: "#dc2626" },
-  { dataKey: "acumulada", nome: "Fadiga Acumulada (> 5.000 km/mês)", cor: "#7c3aed" },
+  { dataKey: "aguda", nome: "Fadiga Aguda", cor: "#FF0000" },
+  { dataKey: "acumulada", nome: "Fadiga Acumulada", cor: "#9B23AB" },
 ];
 
 interface FatigueDistributionChartProps {
@@ -35,6 +35,8 @@ interface FatigueDistributionChartProps {
   filtros: DashboardHierarchyFilters;
   /** Agrupamento exibido ao abrir. Padrão: `department` (padrão do backend). */
   groupByInicial?: DistributionGroupBy;
+  /** Oculta o seletor de agrupamento (usado no Dashboard Geral, onde é fixo por Filial). */
+  ocultarSeletorAgrupamento?: boolean;
 }
 
 export function FatigueDistributionChart({
@@ -42,8 +44,10 @@ export function FatigueDistributionChart({
   mes,
   filtros,
   groupByInicial = "department",
+  ocultarSeletorAgrupamento = false,
 }: FatigueDistributionChartProps) {
-  const [groupBy, setGroupBy] = useState<DistributionGroupBy>(groupByInicial);
+  const [groupByInterno, setGroupByInterno] = useState<DistributionGroupBy>(groupByInicial);
+  const groupBy = ocultarSeletorAgrupamento ? groupByInicial : groupByInterno;
 
   const { data, isLoading, error, refetch } = useApiQuery(getFatigueDistribution, {
     year: ano,
@@ -65,12 +69,14 @@ export function FatigueDistributionChart({
   return (
     <div className="bg-card rounded-lg border border-border p-5">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <h4 className="text-sm font-semibold flex items-center gap-2">
+        <h4 className="text-sm font-bold flex items-center gap-2">
           Registros de Fadiga por {getGroupByLabel(groupBy)}
-          <InfoTooltip texto="Quantidade de registros de fadiga aguda e acumulada no período selecionado. Exibe apenas agrupamentos com ao menos um registro." />
+          <InfoTooltip texto="Quantidade de registros de fadiga aguda e acumulada por filial no período selecionado." />
         </h4>
 
-        <GroupBySelector valor={groupBy} onChange={setGroupBy} />
+        {!ocultarSeletorAgrupamento && (
+          <GroupBySelector valor={groupBy} onChange={setGroupByInterno} />
+        )}
       </div>
 
       <QueryState

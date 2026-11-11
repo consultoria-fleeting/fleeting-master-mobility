@@ -32,49 +32,87 @@ const MESES = [
   "Dezembro",
 ];
 
-const ANOS = [2024, 2025, 2026];
+const ANO_INICIAL = 2024;
+
+function obterAnosDisponiveis(anoSelecionado: number): number[] {
+  const anoMaximo = Math.max(2026, new Date().getFullYear(), anoSelecionado);
+  const anos: number[] = [];
+  for (let ano = ANO_INICIAL; ano <= anoMaximo; ano++) {
+    anos.push(ano);
+  }
+  return anos;
+}
 
 interface PeriodoSelectorProps {
-  mesSelecionado: string;
+  mesSelecionado?: string;
   anoSelecionado: number;
-  onMesChange: (mes: string) => void;
+  onMesChange?: (mes: string) => void;
   onAnoChange: (ano: number) => void;
   /** Exibe a opção "Todos os meses" (valor vazio). */
   opcaoTodosMeses?: boolean;
+  /** Oculta o seletor de mês, exibindo apenas o seletor de ano (ex.: telas de visão anual). */
+  ocultarMes?: boolean;
 }
 
 export function PeriodoSelector({
-  mesSelecionado,
+  mesSelecionado = "",
   anoSelecionado,
   onMesChange,
   onAnoChange,
   opcaoTodosMeses = false,
+  ocultarMes = false,
 }: PeriodoSelectorProps) {
+  const hoje = new Date();
+  const anoAtual = hoje.getFullYear();
+  const mesAtualIndice = hoje.getMonth();
+  const anosDisponiveis = obterAnosDisponiveis(anoSelecionado);
+
+  function handleAnoChange(novoAno: number) {
+    onAnoChange(novoAno);
+    // Se trocar de um ano anterior para o ano atual com um mês futuro selecionado, ajusta para o mês atual
+    if (!ocultarMes && onMesChange && novoAno >= anoAtual && mesSelecionado) {
+      const indiceSelecionado = MESES.indexOf(mesSelecionado);
+      if (indiceSelecionado > mesAtualIndice) {
+        onMesChange(MESES[mesAtualIndice]);
+      }
+    }
+  }
+
   return (
     <div className="flex items-center gap-2">
-      <select
-        id="filtro-mes"
-        value={mesSelecionado}
-        onChange={(e) => onMesChange(e.target.value)}
-        className="text-xs border border-border rounded-md px-3 py-1.5 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-        aria-label="Selecionar mês"
-      >
-        {opcaoTodosMeses && <option value="">Todos os meses</option>}
-        {MESES.map((mes) => (
-          <option key={mes} value={mes}>
-            {mes}
-          </option>
-        ))}
-      </select>
+      {!ocultarMes && (
+        <select
+          id="filtro-mes"
+          value={mesSelecionado}
+          onChange={(e) => onMesChange?.(e.target.value)}
+          className="text-xs border border-border rounded-md px-3 py-1.5 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          aria-label="Selecionar mês"
+        >
+          {opcaoTodosMeses && <option value="">Todos os meses</option>}
+          {MESES.map((mes, indice) => {
+            const ehMesFuturo = anoSelecionado >= anoAtual && indice > mesAtualIndice;
+            return (
+              <option
+                key={mes}
+                value={mes}
+                disabled={ehMesFuturo}
+                className={ehMesFuturo ? "text-muted-foreground/50" : undefined}
+              >
+                {mes}
+              </option>
+            );
+          })}
+        </select>
+      )}
 
       <select
         id="filtro-ano"
         value={anoSelecionado}
-        onChange={(e) => onAnoChange(Number(e.target.value))}
+        onChange={(e) => handleAnoChange(Number(e.target.value))}
         className="text-xs border border-border rounded-md px-3 py-1.5 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         aria-label="Selecionar ano"
       >
-        {ANOS.map((ano) => (
+        {anosDisponiveis.map((ano) => (
           <option key={ano} value={ano}>
             {ano}
           </option>

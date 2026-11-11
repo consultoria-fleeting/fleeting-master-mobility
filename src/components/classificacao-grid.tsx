@@ -33,7 +33,7 @@ export function ClassificacaoGrid({
 }: ClassificacaoGridProps) {
   return (
     <div className="bg-card rounded-lg border border-border p-5">
-      <h3 className="text-base font-semibold text-foreground mb-4">
+      <h3 className="text-base font-bold text-foreground mb-4">
         Classificação dos Condutores
       </h3>
 

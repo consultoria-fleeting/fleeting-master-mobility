@@ -26,15 +26,32 @@ import { getDynamicGroupName } from "@/utils/driver-scoring-display";
 const MIN_CHART_HEIGHT = 250;
 const HEIGHT_PER_GROUP = 36;
 
+const TOOLTIPS_POR_AGRUPAMENTO: Record<DistributionGroupBy, string> = {
+  unit: "Distribuição dos condutores por unidade, segmentados pela classificação de risco.",
+  department: "Distribuição dos condutores por departamento, segmentados pela classificação de risco.",
+  company: "Distribuição dos condutores por filial, segmentados pela classificação de risco.",
+};
+
 interface DriversDistributionChartProps {
   ano: number;
   /** Mês de 1 a 12. */
   mes: number;
   filtros: DashboardHierarchyFilters;
+  /** Agrupamento inicial (ou fixo, quando `ocultarSeletorAgrupamento` = true). Padrão: `department`. */
+  groupByInicial?: DistributionGroupBy;
+  /** Oculta o seletor de agrupamento (usado quando os 3 gráficos são exibidos lado a lado). */
+  ocultarSeletorAgrupamento?: boolean;
 }
 
-export function DriversDistributionChart({ ano, mes, filtros }: DriversDistributionChartProps) {
-  const [groupBy, setGroupBy] = useState<DistributionGroupBy>("department");
+export function DriversDistributionChart({
+  ano,
+  mes,
+  filtros,
+  groupByInicial = "department",
+  ocultarSeletorAgrupamento = false,
+}: DriversDistributionChartProps) {
+  const [groupByInterno, setGroupByInterno] = useState<DistributionGroupBy>(groupByInicial);
+  const groupBy = ocultarSeletorAgrupamento ? groupByInicial : groupByInterno;
 
   const { data, isLoading, error, refetch } = useApiQuery(getDriversDistribution, {
     year: ano,
@@ -60,12 +77,14 @@ export function DriversDistributionChart({ ano, mes, filtros }: DriversDistribut
   return (
     <div className="bg-card rounded-lg border border-border p-5">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <h4 className="text-sm font-semibold flex items-center gap-2">
+        <h4 className="text-sm font-bold flex items-center gap-2">
           Condutores por {getGroupByLabel(groupBy)} x Comportamento
-          <InfoTooltip texto="Distribuição dos condutores por agrupamento, segmentados pela classificação de risco." />
+          <InfoTooltip texto={TOOLTIPS_POR_AGRUPAMENTO[groupBy]} />
         </h4>
 
-        <GroupBySelector valor={groupBy} onChange={setGroupBy} />
+        {!ocultarSeletorAgrupamento && (
+          <GroupBySelector valor={groupBy} onChange={setGroupByInterno} />
+        )}
       </div>
 
       <QueryState
