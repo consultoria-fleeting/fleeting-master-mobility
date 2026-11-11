@@ -88,6 +88,7 @@ export function BarChartHorizontal({
               fill={serie.cor}
               stackId={serie.stackId}
               radius={serie.stackId ? undefined : [0, 4, 4, 0]}
+              maxBarSize={40}
             />
           ))}
         </BarChart>

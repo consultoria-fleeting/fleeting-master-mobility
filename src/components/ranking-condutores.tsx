@@ -5,14 +5,10 @@
  * - Aba Mensal (`period: 'monthly'`): pontuação e classificação do mês.
  * - Aba Anual (`period: 'annual'`): acumulado do ano + 12 colunas de meses (`months.jan` ... `months.dec`),
  *   exibindo "-" quando o mês é `null` (mês não fechado ou anterior à admissão).
- *
- * Particularidades do endpoint:
- * - Só aceita o filtro de gestor (`managerId`) além do período; os demais filtros da tela não se aplicam.
- * - Não retorna `total`: a paginação libera "Próxima página" enquanto a página vier cheia
- *   (`items.length === limit`).
+ * - Responde aos filtros hierárquicos (`company_id`, `unit_id`, `department_id`, `cost_center_id`, `manager_id`, `driver_name`).
  *
  * @example
- * <RankingCondutores ano={2026} mes={3} managerId="uuid-do-gestor" />
+ * <RankingCondutores ano={2026} mes={3} filtros={filtrosApi} />
  */
 
 "use client";
@@ -32,7 +28,11 @@ import {
   getRanking,
   type GetRankingInput,
 } from "@/services/driver-scoring.service";
-import type { RankingAnnualItem, RankingMonthlyItem } from "@/types/driver-scoring";
+import type {
+  DashboardHierarchyFilters,
+  RankingAnnualItem,
+  RankingMonthlyItem,
+} from "@/types/driver-scoring";
 import { displayValue, formatScore, RANKING_ANNUAL_MONTHS } from "@/utils/driver-scoring-helpers";
 
 /** Quantidade de itens por página (padrão do backend). */
@@ -48,15 +48,14 @@ interface RankingCondutoresProps {
   ano: number;
   /** Mês de 1 a 12 (usado só na aba mensal). */
   mes: number;
-  /** UUID do gestor. Vazio = todos. */
-  managerId: string;
+  filtros: DashboardHierarchyFilters;
 }
 
-export function RankingCondutores({ ano, mes, managerId }: RankingCondutoresProps) {
+export function RankingCondutores({ ano, mes, filtros }: RankingCondutoresProps) {
   const [aba, setAba] = useState<Aba>("monthly");
 
-  /* ---------- Página atual (volta para 1 quando aba, período ou gestor mudam) ---------- */
-  const assinatura = `${aba}|${ano}|${mes}|${managerId}`;
+  /* ---------- Página atual (volta para 1 quando aba, período ou filtros mudam) ---------- */
+  const assinatura = JSON.stringify({ aba, ano, mes, filtros });
   const [paginaSalva, setPaginaSalva] = useState({ assinatura, pagina: 1 });
   const pagina = paginaSalva.assinatura === assinatura ? paginaSalva.pagina : 1;
 
@@ -65,7 +64,7 @@ export function RankingCondutores({ ano, mes, managerId }: RankingCondutoresProp
   }
 
   /* ---------- Busca (só a aba ativa dispara requisição) ---------- */
-  const comumParams = { year: ano, page: pagina, limit: ITENS_POR_PAGINA, managerId };
+  const comumParams = { year: ano, page: pagina, limit: ITENS_POR_PAGINA, ...filtros };
 
   const mensal = useApiQuery(
     fetchMonthlyRanking,
@@ -85,12 +84,7 @@ export function RankingCondutores({ ano, mes, managerId }: RankingCondutoresProp
   const categorias = useApiQuery(getDriverCategories, {
     year: ano,
     month: mes,
-    company_id: "",
-    unit_id: "",
-    department_id: "",
-    cost_center_id: "",
-    manager_id: managerId,
-    driver_name: "",
+    ...filtros,
   });
 
   const totalCondutores =
@@ -107,16 +101,11 @@ export function RankingCondutores({ ano, mes, managerId }: RankingCondutoresProp
         onValueChange={(valor) => setAba(valor as Aba)}
         className="flex-col min-w-0"
       >
-        <div className="flex items-start justify-between gap-3 mb-2">
-          <div>
-            <h3 className="text-lg font-bold text-foreground flex items-center gap-2 leading-tight">
-              Ranking dos Condutores
-              <InfoTooltip texto="Classificação geral de todos os condutores com base na pontuação do período selecionado." />
-            </h3>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Esta tabela responde apenas ao período e ao filtro de Gestor.
-            </p>
-          </div>
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <h3 className="text-lg font-bold text-foreground flex items-center gap-2 leading-tight">
+            Ranking dos Condutores
+            <InfoTooltip texto="Classificação geral de todos os condutores com base na pontuação do período selecionado." />
+          </h3>
           <TabsList>
             <TabsTrigger value="monthly">Mensal</TabsTrigger>
             <TabsTrigger value="annual">Anual</TabsTrigger>

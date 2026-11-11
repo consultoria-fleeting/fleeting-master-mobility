@@ -88,15 +88,18 @@ export function ParametroCard({
         ${bgClasse} ${textoClasse}
       `}
     >
-      <div className="flex items-start justify-between">
-        <div className="space-y-2">
-          <p className="text-xs font-medium opacity-90 leading-tight">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1 space-y-2">
+          <p
+            className="text-xs font-medium opacity-90 leading-tight truncate"
+            title={label}
+          >
             {label}
           </p>
           <p className="text-3xl font-bold">{total}</p>
-          <p className="text-[10px] opacity-70">eventos registrados</p>
+          <p className="text-[10px] opacity-70 truncate">eventos registrados</p>
         </div>
-        <div className="p-2 rounded-md bg-white/15">
+        <div className="p-2 rounded-md bg-white/15 shrink-0">
           <Icone className="w-5 h-5" />
         </div>
       </div>

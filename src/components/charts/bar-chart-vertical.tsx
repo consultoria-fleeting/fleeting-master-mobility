@@ -115,6 +115,7 @@ export function BarChartVertical({
             fill={serie.cor}
             stackId={serie.stackId}
             radius={[2, 2, 0, 0]}
+            maxBarSize={40}
           />
         ))}
         {linhaReferencia && (
@@ -137,10 +138,10 @@ export function BarChartVertical({
   if (scrollHorizontal) {
     return (
       <div className="overflow-x-auto">
-        <div style={{ width: `${larguraMinima}px`, height: altura }}>
+        <div className="w-full" style={{ minWidth: `${larguraMinima}px`, height: altura }}>
           {conteudo}
         </div>
-        <p className="text-[10px] text-muted-foreground mt-2">
+        <p className="text-[10px] text-muted-foreground mt-2 lg:hidden">
           Arraste horizontalmente para visualizar todos os dados
         </p>
       </div>

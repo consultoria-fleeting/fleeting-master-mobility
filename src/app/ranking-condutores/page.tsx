@@ -72,8 +72,8 @@ export default function DashboardRankingPage() {
         <TopDriversCard variante="menores" ano={anoSelecionado} mes={mesNumero} filtros={filtrosApi} />
       </div>
 
-      {/* Ranking dos Condutores — Tabela completa com abas Mensal/Anual (filtra só por período e gestor) */}
-      <RankingCondutores ano={anoSelecionado} mes={mesNumero} managerId={filtros.managerId} />
+      {/* Ranking dos Condutores — Tabela completa com abas Mensal/Anual */}
+      <RankingCondutores ano={anoSelecionado} mes={mesNumero} filtros={filtrosApi} />
 
       {/* ==================== ANÁLISES GRÁFICAS ==================== */}
       <div>

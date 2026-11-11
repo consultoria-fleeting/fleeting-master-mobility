@@ -1,8 +1,8 @@
 /**
  * TopDriversCard — Lista Top 10 conectada à API (seções 4.5 e 4.6 da spec).
  *
- * - `variante="referencia"`: `GET /dashboard/top-reference-drivers` (Top 10 Referência).
- * - `variante="menores"`: `GET /dashboard/bottom-scoring-drivers` (10 menores pontuações).
+ * - `variante="referencia"`: `GET /dashboard/top-reference-drivers` (Top 10 Condutores Referência).
+ * - `variante="menores"`: `GET /dashboard/bottom-scoring-drivers` (Top 10 Condutores Críticos).
  *
  * @example
  * <TopDriversCard variante="referencia" ano={2026} mes={3} filtros={filtros} />
@@ -65,10 +65,10 @@ export function TopDriversCard({ variante, ano, mes, filtros }: TopDriversCardPr
 
   return (
     <TopRankingList
-      titulo="10 Menores Pontuações"
+      titulo="Top 10 Condutores Críticos"
       icone={TrendingDown}
       corIcone="text-red-500"
-      descricao="Os 10 condutores com menor pontuação no período (fora da classificação Referência), que necessitam de atenção imediata."
+      descricao="Os 10 condutores com menor pontuação no período, que necessitam de atenção imediata."
       linhas={linhas}
       isLoading={menores.isLoading}
       erro={menores.error}

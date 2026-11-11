@@ -59,7 +59,7 @@ export function QueryState({
     return (
       <div
         role="alert"
-        className="flex flex-col items-center justify-center gap-3 py-10 text-center"
+        className="flex-1 flex flex-col items-center justify-center gap-3 py-10 text-center"
       >
         <AlertCircle className="w-6 h-6 text-destructive" aria-hidden="true" />
         <p className="text-sm text-muted-foreground max-w-md">{getApiErrorMessage(error)}</p>
@@ -82,7 +82,7 @@ export function QueryState({
 
   if (!isLoading && isEmpty) {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+      <div className="flex-1 flex flex-col items-center justify-center gap-2 py-10 text-center">
         <Inbox className="w-6 h-6 text-muted-foreground" aria-hidden="true" />
         <p className="text-sm text-muted-foreground">{emptyMessage}</p>
         {emptyHint && <p className="text-xs text-muted-foreground max-w-md">{emptyHint}</p>}
@@ -93,7 +93,7 @@ export function QueryState({
   return (
     <div
       aria-busy={isLoading}
-      className={`transition-opacity duration-200 ${isLoading ? "opacity-50" : "opacity-100"}`}
+      className={`flex-1 flex flex-col justify-center transition-opacity duration-200 ${isLoading ? "opacity-50" : "opacity-100"}`}
     >
       {children}
     </div>

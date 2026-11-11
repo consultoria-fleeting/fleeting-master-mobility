@@ -17,7 +17,7 @@
 
 "use client";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { z } from "zod";
 
 export const OPCOES_ITENS_POR_PAGINA_PADRAO = [10, 25, 50, 100] as const;
@@ -98,20 +98,26 @@ export function PaginacaoNumerada({
       <div className="flex flex-wrap items-center gap-2">
         {exibirSeletorLimite && (
           <>
-            <select
-              id="select-itens-por-pagina"
-              value={itensPorPagina}
-              onChange={(e) => handleLimiteChange(e.target.value)}
-              disabled={desabilitado}
-              aria-label="Itens por página"
-              className="h-8 text-xs font-medium border border-border rounded-md px-2.5 bg-background text-foreground hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-            >
-              {opcoesItensPorPagina.map((opcao) => (
-                <option key={opcao} value={opcao}>
-                  {opcao} por página
-                </option>
-              ))}
-            </select>
+            <div className="relative inline-flex items-center">
+              <select
+                id="select-itens-por-pagina"
+                value={itensPorPagina}
+                onChange={(e) => handleLimiteChange(e.target.value)}
+                disabled={desabilitado}
+                aria-label="Itens por página"
+                className="appearance-none h-8 text-xs font-medium border border-border rounded-md pl-2.5 pr-7 bg-background text-foreground hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {opcoesItensPorPagina.map((opcao) => (
+                  <option key={opcao} value={opcao}>
+                    {opcao} por página
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                className="pointer-events-none absolute right-2.5 h-3.5 w-3.5 text-muted-foreground"
+                aria-hidden="true"
+              />
+            </div>
             <span className="h-4 w-px bg-border" aria-hidden="true" />
           </>
         )}

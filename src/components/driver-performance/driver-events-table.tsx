@@ -24,7 +24,10 @@
 import { useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { ApplyExceptionDialog } from "@/components/driver-performance/apply-exception-dialog";
-import { PaginacaoNumerada } from "@/components/paginacao-numerada";
+import {
+  OPCOES_ITENS_POR_PAGINA_PADRAO,
+  PaginacaoNumerada,
+} from "@/components/paginacao-numerada";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { DriverEvent, DriverMonthlyScore, PaginationTotalPages } from "@/types/driver-scoring";
@@ -32,6 +35,9 @@ import { formatDateTime, getSeverityClassName } from "@/utils/driver-scoring-dis
 import { displayValue } from "@/utils/driver-scoring-helpers";
 import { getEventMonthScore } from "@/utils/exception-score-estimate";
 import { canManageExceptions } from "@/utils/permissions";
+
+/** Limite de caracteres exibidos na justificativa da exceção antes de aplicar reticências. */
+const LIMITE_CARACTERES_JUSTIFICATIVA = 65;
 
 interface DriverEventsTableProps {
   /** UUID do condutor (`driver.id`), usado ao aplicar exceções. */
@@ -43,20 +49,48 @@ interface DriverEventsTableProps {
   /** Desabilita a paginação enquanto uma nova página carrega. */
   carregando?: boolean;
   onPaginaChange: (pagina: number) => void;
+  /** Permite alterar a quantidade de eventos por página (10, 25, 50 ou 100). */
+  onItensPorPaginaChange?: (itensPorPagina: number) => void;
   /** Chamado após aplicar uma exceção, para recarregar o detalhe do condutor. */
   onExceptionApplied: () => void;
 }
 
-/** Nome do evento + justificativa da exceção, quando houver. */
+/** Nome do evento + justificativa da exceção (truncada com "..." e tooltip com o texto completo). */
 function EventoComExcecao({ evento }: { evento: DriverEvent }) {
+  const justificativaCompleta =
+    evento.exception?.justification ?? "Desconsiderado pela Gestão de Exceções";
+  const foiTruncada = justificativaCompleta.length > LIMITE_CARACTERES_JUSTIFICATIVA;
+  const justificativaExibida = foiTruncada
+    ? `${justificativaCompleta.slice(0, LIMITE_CARACTERES_JUSTIFICATIVA).trimEnd()}...`
+    : justificativaCompleta;
+
   return (
-    <div>
-      <span className={evento.has_exception ? "text-muted-foreground" : ""}>{evento.label}</span>
+    <div className="min-w-0 max-w-[260px] sm:max-w-[340px] lg:max-w-[420px]">
+      <span
+        className={`block truncate ${evento.has_exception ? "text-muted-foreground" : ""}`}
+        title={evento.label}
+      >
+        {evento.label}
+      </span>
 
       {evento.has_exception && (
-        <div className="mt-1 flex items-start gap-1.5 text-[11px] text-emerald-700">
-          <ShieldCheck className="w-3.5 h-3.5 shrink-0 mt-px" aria-hidden="true" />
-          <span>{evento.exception?.justification ?? "Desconsiderado pela Gestão de Exceções"}</span>
+        <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-emerald-700 min-w-0">
+          <ShieldCheck className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+          {foiTruncada ? (
+            <Tooltip>
+              <TooltipTrigger
+                render={<span tabIndex={0} />}
+                className="truncate cursor-help outline-none focus-visible:underline"
+              >
+                {justificativaExibida}
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-sm text-xs break-words">
+                {justificativaCompleta}
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <span className="truncate">{justificativaExibida}</span>
+          )}
         </div>
       )}
     </div>
@@ -137,6 +171,7 @@ export function DriverEventsTable({
   pagination,
   carregando = false,
   onPaginaChange,
+  onItensPorPaginaChange,
   onExceptionApplied,
 }: DriverEventsTableProps) {
   const [eventoSelecionado, setEventoSelecionado] = useState<DriverEvent | null>(null);
@@ -150,14 +185,14 @@ export function DriverEventsTable({
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b text-muted-foreground">
-              <th className="text-left py-2 px-2">Data</th>
-              <th className="text-left py-2 px-2">Evento</th>
-              <th className="text-left py-2 px-2">Origem</th>
-              <th className="text-left py-2 px-2">Severidade</th>
-              <th className="text-right py-2 px-2">Pontos</th>
-              <th className="text-right py-2 px-2">Impacto</th>
-              <th className="text-left py-2 px-2">Status</th>
-              <th className="text-right py-2 px-2">Ações</th>
+              <th className="text-left py-2 px-2 whitespace-nowrap">Data</th>
+              <th className="text-left py-2 px-2 whitespace-nowrap">Evento</th>
+              <th className="text-left py-2 px-2 whitespace-nowrap">Origem</th>
+              <th className="text-left py-2 px-2 whitespace-nowrap">Severidade</th>
+              <th className="text-right py-2 px-2 whitespace-nowrap">Pontos</th>
+              <th className="text-right py-2 px-2 whitespace-nowrap">Impacto</th>
+              <th className="text-left py-2 px-2 whitespace-nowrap">Status</th>
+              <th className="text-right py-2 px-2 whitespace-nowrap">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -165,7 +200,7 @@ export function DriverEventsTable({
               events.map((evento) => (
                 <tr
                   key={evento.id}
-                  className="border-b last:border-0 hover:bg-muted/50 transition-colors align-top"
+                  className="border-b last:border-0 hover:bg-muted/50 transition-colors align-middle"
                 >
                   <td className="py-2 px-2 text-muted-foreground whitespace-nowrap">
                     {formatDateTime(evento.date)}
@@ -173,18 +208,20 @@ export function DriverEventsTable({
                   <td className="py-2 px-2">
                     <EventoComExcecao evento={evento} />
                   </td>
-                  <td className="py-2 px-2 text-muted-foreground">{displayValue(evento.origin)}</td>
-                  <td className={`py-2 px-2 ${getSeverityClassName(evento.severity)}`}>
+                  <td className="py-2 px-2 text-muted-foreground whitespace-nowrap">
+                    {displayValue(evento.origin)}
+                  </td>
+                  <td className={`py-2 px-2 whitespace-nowrap ${getSeverityClassName(evento.severity)}`}>
                     {evento.severity}
                   </td>
-                  <td className="py-2 px-2 text-right">{evento.raw_points}</td>
-                  <td className="py-2 px-2 text-right">
+                  <td className="py-2 px-2 text-right whitespace-nowrap">{evento.raw_points}</td>
+                  <td className="py-2 px-2 text-right whitespace-nowrap">
                     <ImpactoEvento evento={evento} />
                   </td>
-                  <td className="py-2 px-2">
+                  <td className="py-2 px-2 whitespace-nowrap">
                     <StatusEvento evento={evento} />
                   </td>
-                  <td className="py-2 px-2 text-right">
+                  <td className="py-2 px-2 text-right whitespace-nowrap">
                     <BotaoAplicarExcecao
                       evento={evento}
                       podeGerenciar={podeGerenciar}
@@ -211,6 +248,8 @@ export function DriverEventsTable({
         itensPorPagina={pagination.limit}
         rotuloItens="eventos"
         desabilitado={carregando}
+        opcoesItensPorPagina={OPCOES_ITENS_POR_PAGINA_PADRAO}
+        onItensPorPaginaChange={onItensPorPaginaChange}
         onPaginaChange={onPaginaChange}
       />
 

@@ -17,8 +17,17 @@
 
 "use client";
 
-import { Filter } from "lucide-react";
+import { ChevronDown, Filter } from "lucide-react";
 import { z } from "zod";
+import {
+  CLASSE_OPCAO_SELECT_FILTRO,
+  obterClasseContainerFiltro,
+  obterClasseControleFiltro,
+  obterClasseIconeFiltro,
+  obterClasseSelectFiltro,
+  obterClasseSetaSelectFiltro,
+  useStickyColado,
+} from "@/hooks/use-sticky-colado";
 import type { FiltrosState, OpcoesFiltro } from "@/types/condutor";
 
 interface FiltroBarraProps {
@@ -44,6 +53,11 @@ export function FiltroBarra({
   opcoes,
   onFiltroChange,
 }: FiltroBarraProps) {
+  const { ref, colado } = useStickyColado<HTMLDivElement>();
+  const classeInput = obterClasseControleFiltro(colado);
+  const classeSelect = obterClasseSelectFiltro(colado);
+  const classeSeta = obterClasseSetaSelectFiltro(colado);
+
   /**
    * Valida e aplica o filtro de nome usando Zod.
    * Se a validação falhar, o valor não é aplicado.
@@ -66,8 +80,8 @@ export function FiltroBarra({
   }
 
   return (
-    <div className="sticky top-2 z-20 bg-card/95 backdrop-blur-sm rounded-lg border border-border p-4 shadow-sm flex flex-wrap items-center gap-3">
-      <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
+    <div ref={ref} className={obterClasseContainerFiltro(colado)}>
+      <Filter className={obterClasseIconeFiltro(colado)} />
 
       <input
         id="filtro-nome-condutor"
@@ -75,85 +89,110 @@ export function FiltroBarra({
         placeholder="Nome do condutor..."
         value={filtros.nome}
         onChange={(e) => handleNomeChange(e.target.value)}
-        className="text-xs border border-border rounded-md px-3 py-1.5 bg-background text-foreground w-40 focus:outline-none focus:ring-2 focus:ring-ring"
+        className={`${classeInput} w-40`}
         aria-label="Filtrar por nome do condutor"
         maxLength={100}
       />
 
-      <select
-        id="filtro-gestor"
-        value={filtros.gestor}
-        onChange={(e) => handleSelectChange("gestor", e.target.value)}
-        className="text-xs border border-border rounded-md px-3 py-1.5 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-        aria-label="Filtrar por gestor"
-      >
-        <option value="">Todos os Gestores</option>
-        {opcoes.gestores.map((gestor) => (
-          <option key={gestor} value={gestor}>
-            {gestor}
+      <div className="relative inline-flex items-center">
+        <select
+          id="filtro-gestor"
+          value={filtros.gestor}
+          onChange={(e) => handleSelectChange("gestor", e.target.value)}
+          className={classeSelect}
+          aria-label="Filtrar por gestor"
+        >
+          <option value="" className={CLASSE_OPCAO_SELECT_FILTRO}>
+            Todos os Gestores
           </option>
-        ))}
-      </select>
+          {opcoes.gestores.map((gestor) => (
+            <option key={gestor} value={gestor} className={CLASSE_OPCAO_SELECT_FILTRO}>
+              {gestor}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className={classeSeta} aria-hidden="true" />
+      </div>
 
-      <select
-        id="filtro-centro-custo"
-        value={filtros.centroCusto}
-        onChange={(e) => handleSelectChange("centroCusto", e.target.value)}
-        className="text-xs border border-border rounded-md px-3 py-1.5 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-        aria-label="Filtrar por centro de custo"
-      >
-        <option value="">Todos os Centros de Custo</option>
-        {opcoes.centrosCusto.map((cc) => (
-          <option key={cc} value={cc}>
-            {cc}
+      <div className="relative inline-flex items-center">
+        <select
+          id="filtro-centro-custo"
+          value={filtros.centroCusto}
+          onChange={(e) => handleSelectChange("centroCusto", e.target.value)}
+          className={classeSelect}
+          aria-label="Filtrar por centro de custo"
+        >
+          <option value="" className={CLASSE_OPCAO_SELECT_FILTRO}>
+            Todos os Centros de Custo
           </option>
-        ))}
-      </select>
+          {opcoes.centrosCusto.map((cc) => (
+            <option key={cc} value={cc} className={CLASSE_OPCAO_SELECT_FILTRO}>
+              {cc}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className={classeSeta} aria-hidden="true" />
+      </div>
 
-      <select
-        id="filtro-filial"
-        value={filtros.departamento}
-        onChange={(e) => handleSelectChange("departamento", e.target.value)}
-        className="text-xs border border-border rounded-md px-3 py-1.5 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-        aria-label="Filtrar por filial"
-      >
-        <option value="">Todas as Filiais</option>
-        {opcoes.departamentos.map((depto) => (
-          <option key={depto} value={depto}>
-            {depto}
+      <div className="relative inline-flex items-center">
+        <select
+          id="filtro-filial"
+          value={filtros.departamento}
+          onChange={(e) => handleSelectChange("departamento", e.target.value)}
+          className={classeSelect}
+          aria-label="Filtrar por filial"
+        >
+          <option value="" className={CLASSE_OPCAO_SELECT_FILTRO}>
+            Todas as Filiais
           </option>
-        ))}
-      </select>
+          {opcoes.departamentos.map((depto) => (
+            <option key={depto} value={depto} className={CLASSE_OPCAO_SELECT_FILTRO}>
+              {depto}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className={classeSeta} aria-hidden="true" />
+      </div>
 
-      <select
-        id="filtro-departamento"
-        value={filtros.funcao}
-        onChange={(e) => handleSelectChange("funcao", e.target.value)}
-        className="text-xs border border-border rounded-md px-3 py-1.5 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-        aria-label="Filtrar por departamento"
-      >
-        <option value="">Todos os Departamentos</option>
-        {opcoes.funcoes.map((funcao) => (
-          <option key={funcao} value={funcao}>
-            {funcao}
+      <div className="relative inline-flex items-center">
+        <select
+          id="filtro-departamento"
+          value={filtros.funcao}
+          onChange={(e) => handleSelectChange("funcao", e.target.value)}
+          className={classeSelect}
+          aria-label="Filtrar por departamento"
+        >
+          <option value="" className={CLASSE_OPCAO_SELECT_FILTRO}>
+            Todos os Departamentos
           </option>
-        ))}
-      </select>
+          {opcoes.funcoes.map((funcao) => (
+            <option key={funcao} value={funcao} className={CLASSE_OPCAO_SELECT_FILTRO}>
+              {funcao}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className={classeSeta} aria-hidden="true" />
+      </div>
 
-      <select
-        id="filtro-unidade"
-        value={filtros.negocio}
-        onChange={(e) => handleSelectChange("negocio", e.target.value)}
-        className="text-xs border border-border rounded-md px-3 py-1.5 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-        aria-label="Filtrar por unidade"
-      >
-        <option value="">Todas as Unidades</option>
-        {opcoes.negocios.map((negocio) => (
-          <option key={negocio} value={negocio}>
-            {negocio}
+      <div className="relative inline-flex items-center">
+        <select
+          id="filtro-unidade"
+          value={filtros.negocio}
+          onChange={(e) => handleSelectChange("negocio", e.target.value)}
+          className={classeSelect}
+          aria-label="Filtrar por unidade"
+        >
+          <option value="" className={CLASSE_OPCAO_SELECT_FILTRO}>
+            Todas as Unidades
           </option>
-        ))}
-      </select>
+          {opcoes.negocios.map((negocio) => (
+            <option key={negocio} value={negocio} className={CLASSE_OPCAO_SELECT_FILTRO}>
+              {negocio}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className={classeSeta} aria-hidden="true" />
+      </div>
     </div>
   );
 }

@@ -52,25 +52,9 @@ export type ExposureLevelBucket = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
 
 export type RankingPeriod = "monthly" | "annual";
 
-/** `GET /dashboard/ranking` (4.1) — `GetDashboardDto`. Único filtro: `managerId` (camelCase). */
-export interface RankingQueryParams {
-  period: RankingPeriod;
-  /** Inteiro 2000–2100. */
-  year: number;
-  /** Inteiro 1–12. Obrigatório quando `period = 'monthly'`; nunca enviado em `annual`. */
-  month?: number;
-  /** Padrão no backend: 1. */
-  page?: number;
-  /** Padrão no backend: 15 (máx. 100). */
-  limit?: number;
-  managerId?: string;
-  /** `true` retorna todos os registros, sem paginação. */
-  export?: boolean;
-}
-
 /**
  * Filtros hierárquicos opcionais (todos UUID, exceto `driver_name`).
- * Usados nos endpoints 4.2 a 4.10 (snake_case).
+ * Usados nos endpoints 4.1 a 4.11 (snake_case).
  */
 export interface DashboardHierarchyFilters {
   company_id?: string;
@@ -80,6 +64,21 @@ export interface DashboardHierarchyFilters {
   manager_id?: string;
   /** Busca "contém", case-insensitive. */
   driver_name?: string;
+}
+
+/** `GET /dashboard/ranking` (4.1) — `GetDashboardDto`. Aceita período, paginação e filtros hierárquicos. */
+export interface RankingQueryParams extends DashboardHierarchyFilters {
+  period: RankingPeriod;
+  /** Inteiro 2000–2100. */
+  year: number;
+  /** Inteiro 1–12. Obrigatório quando `period = 'monthly'`; nunca enviado em `annual`. */
+  month?: number;
+  /** Padrão no backend: 1. */
+  page?: number;
+  /** Padrão no backend: 15 (máx. 100). */
+  limit?: number;
+  /** `true` retorna todos os registros, sem paginação. */
+  export?: boolean;
 }
 
 /**

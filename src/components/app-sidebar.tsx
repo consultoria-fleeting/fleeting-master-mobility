@@ -17,7 +17,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -37,6 +37,18 @@ import {
 import { useAmbiente } from "@/hooks/use-ambiente";
 import { logout } from "@/utils/auth";
 import { getLegacyUrl } from "@/utils/env-config";
+import {
+  getAuthenticatedUserProfile,
+  PERFIL_USUARIO_PADRAO,
+} from "@/utils/permissions";
+
+function assinarPerfilUsuario() {
+  return () => {};
+}
+
+function obterPerfilNoServidor() {
+  return PERFIL_USUARIO_PADRAO;
+}
 
 /* ========================================================= */
 /*  ESTILOS COMPARTILHADOS                                   */
@@ -55,6 +67,11 @@ const CLASSE_ITEM_INATIVO =
 export function AppSidebar({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const ambiente = useAmbiente();
+  const perfilUsuario = useSyncExternalStore(
+    assinarPerfilUsuario,
+    getAuthenticatedUserProfile,
+    obterPerfilNoServidor,
+  );
   const [colapsado, setColapsado] = useState(false);
   const [mobileAberto, setMobileAberto] = useState(false);
   /** Aberto/fechado escolhido pelo usuário. Sem escolha, o grupo abre se contiver a rota atual. */
@@ -290,11 +307,15 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
           {!colapsado && (
             <div className="flex min-w-0 flex-1 items-center gap-3 px-1">
               <div className="w-8 h-8 shrink-0 rounded-full bg-[hsl(var(--sidebar-accent))] flex items-center justify-center text-xs font-bold">
-                GF
+                {perfilUsuario.iniciais}
               </div>
               <div className="min-w-0 text-xs">
-                <p className="truncate font-medium">Gestor de Frota</p>
-                <p className="truncate opacity-60">Admin</p>
+                <p className="truncate font-medium" title={perfilUsuario.nome}>
+                  {perfilUsuario.nome}
+                </p>
+                <p className="truncate opacity-60" title={perfilUsuario.permissao}>
+                  {perfilUsuario.permissao}
+                </p>
               </div>
             </div>
           )}

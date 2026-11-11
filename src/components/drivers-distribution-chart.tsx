@@ -75,7 +75,7 @@ export function DriversDistributionChart({
   const altura = Math.max(MIN_CHART_HEIGHT, chart.rows.length * HEIGHT_PER_GROUP);
 
   return (
-    <div className="bg-card rounded-lg border border-border p-5">
+    <div className="bg-card rounded-lg border border-border p-5 flex flex-col h-full">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h4 className="text-sm font-bold flex items-center gap-2">
           Condutores por {getGroupByLabel(groupBy)} x Comportamento

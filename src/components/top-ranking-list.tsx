@@ -7,7 +7,7 @@
  *
  * Casos de uso:
  * - Top 10 Condutores Referência (sem coluna de classificação)
- * - 10 Menores Pontuações (com coluna de classificação)
+ * - Top 10 Condutores Críticos (com coluna de classificação)
  *
  * O nome do condutor é um link para `/ranking-condutores/performance-condutores/<uuid>/`.
  *

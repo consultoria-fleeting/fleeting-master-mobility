@@ -15,10 +15,19 @@
 
 "use client";
 
-import { Filter } from "lucide-react";
+import { ChevronDown, Filter } from "lucide-react";
 import { z } from "zod";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { RankingFilterOptions } from "@/hooks/use-ranking-filter-options";
+import {
+  CLASSE_OPCAO_SELECT_FILTRO,
+  obterClasseContainerFiltro,
+  obterClasseControleFiltro,
+  obterClasseIconeFiltro,
+  obterClasseSelectFiltro,
+  obterClasseSetaSelectFiltro,
+  useStickyColado,
+} from "@/hooks/use-sticky-colado";
 import type { SelectOption } from "@/types/driver-scoring";
 import type { RankingFiltersState } from "@/types/ranking-filtros";
 
@@ -27,9 +36,6 @@ const nomeSchema = z.string().max(100, "Nome muito longo");
 
 /** Schema Zod para os valores dos selects (UUID vindo da API ou vazio). */
 const selectSchema = z.string().max(100);
-
-const ESTILO_CONTROLE =
-  "text-xs border border-border rounded-md px-3 py-1.5 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed";
 
 const AVISO_FILIAL_OBRIGATORIA =
   "Selecione uma filial para filtrar por departamento, centro de custo e gestor.";
@@ -41,7 +47,10 @@ interface FiltrosHierarquicosProps {
 }
 
 export function FiltrosHierarquicos({ filtros, opcoes, onChange }: FiltrosHierarquicosProps) {
+  const { ref, colado } = useStickyColado<HTMLDivElement>();
   const semFilial = filtros.companyId === "";
+  const classeInput = obterClasseControleFiltro(colado);
+  const classeSelect = obterClasseSelectFiltro(colado);
 
   function handleNomeChange(valor: string) {
     const resultado = nomeSchema.safeParse(valor);
@@ -69,8 +78,8 @@ export function FiltrosHierarquicos({ filtros, opcoes, onChange }: FiltrosHierar
   }
 
   return (
-    <div className="sticky top-2 z-20 bg-card/95 backdrop-blur-sm rounded-lg border border-border p-4 shadow-sm flex flex-wrap items-center gap-3">
-      <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
+    <div ref={ref} className={obterClasseContainerFiltro(colado)}>
+      <Filter className={obterClasseIconeFiltro(colado)} />
 
       <input
         id="filtro-nome-condutor"
@@ -78,7 +87,7 @@ export function FiltrosHierarquicos({ filtros, opcoes, onChange }: FiltrosHierar
         placeholder="Nome do condutor..."
         value={filtros.driverName}
         onChange={(e) => handleNomeChange(e.target.value)}
-        className={`${ESTILO_CONTROLE} w-40`}
+        className={`${classeInput} w-40`}
         aria-label="Filtrar por nome do condutor"
         maxLength={100}
       />
@@ -89,6 +98,8 @@ export function FiltrosHierarquicos({ filtros, opcoes, onChange }: FiltrosHierar
         placeholder="Todas as Filiais"
         valor={filtros.companyId}
         consulta={opcoes.companies}
+        classeSelect={classeSelect}
+        colado={colado}
         onChange={handleFilialChange}
       />
 
@@ -98,6 +109,8 @@ export function FiltrosHierarquicos({ filtros, opcoes, onChange }: FiltrosHierar
         placeholder="Todas as Unidades"
         valor={filtros.unitId}
         consulta={opcoes.units}
+        classeSelect={classeSelect}
+        colado={colado}
         onChange={(valor) => handleSelectChange("unitId", valor)}
       />
 
@@ -107,6 +120,8 @@ export function FiltrosHierarquicos({ filtros, opcoes, onChange }: FiltrosHierar
         placeholder="Todos os Departamentos"
         valor={filtros.departmentId}
         consulta={opcoes.departments}
+        classeSelect={classeSelect}
+        colado={colado}
         desabilitado={semFilial}
         motivoDesabilitado={AVISO_FILIAL_OBRIGATORIA}
         onChange={(valor) => handleSelectChange("departmentId", valor)}
@@ -118,6 +133,8 @@ export function FiltrosHierarquicos({ filtros, opcoes, onChange }: FiltrosHierar
         placeholder="Todos os Centros de Custo"
         valor={filtros.costCenterId}
         consulta={opcoes.costCenters}
+        classeSelect={classeSelect}
+        colado={colado}
         desabilitado={semFilial}
         motivoDesabilitado={AVISO_FILIAL_OBRIGATORIA}
         onChange={(valor) => handleSelectChange("costCenterId", valor)}
@@ -129,6 +146,8 @@ export function FiltrosHierarquicos({ filtros, opcoes, onChange }: FiltrosHierar
         placeholder="Todos os Gestores"
         valor={filtros.managerId}
         consulta={opcoes.managers}
+        classeSelect={classeSelect}
+        colado={colado}
         desabilitado={semFilial}
         motivoDesabilitado={AVISO_FILIAL_OBRIGATORIA}
         onChange={(valor) => handleSelectChange("managerId", valor)}
@@ -145,6 +164,8 @@ interface FiltroSelectProps {
   placeholder: string;
   valor: string;
   consulta: { data: SelectOption[] | undefined; isLoading: boolean; error: unknown };
+  classeSelect: string;
+  colado: boolean;
   desabilitado?: boolean;
   motivoDesabilitado?: string;
   onChange: (valor: string) => void;
@@ -157,6 +178,8 @@ function FiltroSelect({
   placeholder,
   valor,
   consulta,
+  classeSelect,
+  colado,
   desabilitado = false,
   motivoDesabilitado,
   onChange,
@@ -169,21 +192,29 @@ function FiltroSelect({
       : placeholder;
 
   const select = (
-    <select
-      id={id}
-      value={valor}
-      onChange={(e) => onChange(e.target.value)}
-      disabled={desabilitado}
-      className={ESTILO_CONTROLE}
-      aria-label={rotulo}
-    >
-      <option value="">{textoPadrao}</option>
-      {opcoes.map((opcao) => (
-        <option key={opcao.id} value={opcao.id}>
-          {opcao.name}
+    <div className="relative inline-flex items-center">
+      <select
+        id={id}
+        value={valor}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={desabilitado}
+        className={classeSelect}
+        aria-label={rotulo}
+      >
+        <option value="" className={CLASSE_OPCAO_SELECT_FILTRO}>
+          {textoPadrao}
         </option>
-      ))}
-    </select>
+        {opcoes.map((opcao) => (
+          <option key={opcao.id} value={opcao.id} className={CLASSE_OPCAO_SELECT_FILTRO}>
+            {opcao.name}
+          </option>
+        ))}
+      </select>
+      <ChevronDown
+        className={obterClasseSetaSelectFiltro(colado, desabilitado)}
+        aria-hidden="true"
+      />
+    </div>
   );
 
   if (!desabilitado || !motivoDesabilitado) {

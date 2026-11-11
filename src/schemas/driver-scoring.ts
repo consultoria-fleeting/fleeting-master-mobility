@@ -44,7 +44,7 @@ const hierarchyFiltersShape = {
 // ---------------------------------------------------------------------------
 
 /**
- * Aceita SOMENTE `period, year, month, page, limit, managerId, export`.
+ * Aceita `period, year, month, page, limit, export` e os filtros hierárquicos (`company_id, department_id, unit_id, cost_center_id, manager_id, driver_name`).
  * - `month` é obrigatório no modo mensal (sem ele o backend retorna 500).
  * - `month` é removido no modo anual.
  */
@@ -55,7 +55,7 @@ export const rankingQuerySchema = z
     month: monthSchema.optional(),
     page: pageSchema.optional(),
     limit: limitMax100Schema.optional(),
-    managerId: uuidSchema.optional(),
+    ...hierarchyFiltersShape,
     export: exportSchema,
   })
   .superRefine((params, ctx) => {

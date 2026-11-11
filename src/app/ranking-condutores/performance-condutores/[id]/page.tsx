@@ -14,6 +14,7 @@
 
 "use client";
 
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { DriverEventsTable } from "@/components/driver-performance/driver-events-table";
@@ -31,7 +32,7 @@ import type { DriverPerformanceDriver } from "@/types/driver-scoring";
 import { maskDocument } from "@/utils/driver-scoring-display";
 import { displayValue } from "@/utils/driver-scoring-helpers";
 
-const EVENTOS_POR_PAGINA = 10;
+const EVENTOS_POR_PAGINA_INICIAL = 10;
 
 /** Função estável (fora do componente), exigida pelo `useApiQuery`. */
 const fetchDriverDetail = (params: {
@@ -78,8 +79,9 @@ export default function PerformanceCondutorPage() {
     mesNumero,
   } = usePeriodoUrl({ permitirTodosMeses: true });
 
+  const [itensPorPagina, setItensPorPagina] = useState<number>(EVENTOS_POR_PAGINA_INICIAL);
   const [pagina, setPagina] = useResettablePage(
-    JSON.stringify({ identifier, anoSelecionado, mesNumero }),
+    JSON.stringify({ identifier, anoSelecionado, mesNumero, itensPorPagina }),
   );
 
   const { data, isLoading, error, refetch } = useApiQuery(fetchDriverDetail, {
@@ -87,7 +89,7 @@ export default function PerformanceCondutorPage() {
     year: anoSelecionado,
     month: mesNumero,
     page: pagina,
-    limit: EVENTOS_POR_PAGINA,
+    limit: itensPorPagina,
   });
 
   return (
@@ -154,6 +156,7 @@ export default function PerformanceCondutorPage() {
                 pagination={data.events.pagination}
                 carregando={isLoading}
                 onPaginaChange={setPagina}
+                onItensPorPaginaChange={setItensPorPagina}
                 onExceptionApplied={refetch}
               />
             </TabsContent>

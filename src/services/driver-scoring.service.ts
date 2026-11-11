@@ -77,12 +77,11 @@ async function get<T>(url: string, params?: object): Promise<T> {
 // 4.1 — GET /dashboard/ranking
 // ---------------------------------------------------------------------------
 
-/** Aceita `manager_id` (snake_case) por conveniência; é convertido para `managerId`. */
-export type GetRankingInput = RankingQueryParams & { manager_id?: string };
+export type GetRankingInput = RankingQueryParams;
 
 /**
  * Ranking de condutores (mensal ou anual).
- * Envia estritamente `period, year, month, page, limit, managerId, export`.
+ * Envia `period, year, month, page, limit, export` + filtros hierárquicos.
  * - `monthly`: `month` (1-12) obrigatório.
  * - `annual`: `month` nunca é enviado.
  */
@@ -96,11 +95,7 @@ export async function getRanking(
   params: GetRankingInput,
 ): Promise<RankingMonthlyResponse | RankingAnnualResponse>;
 export async function getRanking(params: GetRankingInput) {
-  const { manager_id, ...rest } = params;
-  const query = buildQuery(rankingQuerySchema, {
-    ...rest,
-    managerId: rest.managerId || manager_id,
-  });
+  const query = buildQuery(rankingQuerySchema, params);
   return get<RankingMonthlyResponse | RankingAnnualResponse>("/dashboard/ranking", query);
 }
 

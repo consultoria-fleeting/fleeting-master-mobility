@@ -65,17 +65,24 @@ export function StatCard({
         ${className}
       `}
     >
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <p className="text-xs font-medium opacity-80 uppercase tracking-wide">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1 space-y-1">
+          <p
+            className="text-xs font-medium opacity-80 uppercase tracking-wide truncate"
+            title={titulo}
+          >
             {titulo}
           </p>
           <p className="text-2xl font-bold">{valor}</p>
-          {subtitulo && <p className="text-xs opacity-70">{subtitulo}</p>}
+          {subtitulo && (
+            <p className="text-xs opacity-70 truncate" title={subtitulo}>
+              {subtitulo}
+            </p>
+          )}
         </div>
 
         {Icone && (
-          <div className="p-2 rounded-md bg-white/10">
+          <div className="p-2 rounded-md bg-white/10 shrink-0">
             <Icone className="w-5 h-5" />
           </div>
         )}

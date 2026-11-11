@@ -23,8 +23,10 @@ function scoreOrDash(score: number | null): string {
 
 function KpiCard({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
-    <div className="bg-card rounded-lg border border-border p-4">
-      <p className="text-[10px] text-muted-foreground uppercase">{titulo}</p>
+    <div className="bg-card rounded-lg border border-border p-4 min-w-0">
+      <p className="text-[10px] text-muted-foreground uppercase truncate" title={titulo}>
+        {titulo}
+      </p>
       <div className="mt-1">{children}</div>
     </div>
   );

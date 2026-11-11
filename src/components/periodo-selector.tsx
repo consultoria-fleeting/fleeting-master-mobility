@@ -17,6 +17,11 @@
 
 "use client";
 
+import { ChevronDown } from "lucide-react";
+
+const CLASSE_SELECT_PERIODO =
+  "appearance-none cursor-pointer text-xs border border-border rounded-md pl-2.5 pr-7 py-1.5 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring";
+
 const MESES = [
   "Janeiro",
   "Fevereiro",
@@ -81,43 +86,55 @@ export function PeriodoSelector({
   return (
     <div className="flex items-center gap-2">
       {!ocultarMes && (
-        <select
-          id="filtro-mes"
-          value={mesSelecionado}
-          onChange={(e) => onMesChange?.(e.target.value)}
-          className="text-xs border border-border rounded-md px-3 py-1.5 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          aria-label="Selecionar mês"
-        >
-          {opcaoTodosMeses && <option value="">Todos os meses</option>}
-          {MESES.map((mes, indice) => {
-            const ehMesFuturo = anoSelecionado >= anoAtual && indice > mesAtualIndice;
-            return (
-              <option
-                key={mes}
-                value={mes}
-                disabled={ehMesFuturo}
-                className={ehMesFuturo ? "text-muted-foreground/50" : undefined}
-              >
-                {mes}
-              </option>
-            );
-          })}
-        </select>
+        <div className="relative inline-flex items-center">
+          <select
+            id="filtro-mes"
+            value={mesSelecionado}
+            onChange={(e) => onMesChange?.(e.target.value)}
+            className={CLASSE_SELECT_PERIODO}
+            aria-label="Selecionar mês"
+          >
+            {opcaoTodosMeses && <option value="">Todos os meses</option>}
+            {MESES.map((mes, indice) => {
+              const ehMesFuturo = anoSelecionado >= anoAtual && indice > mesAtualIndice;
+              return (
+                <option
+                  key={mes}
+                  value={mes}
+                  disabled={ehMesFuturo}
+                  className={ehMesFuturo ? "text-muted-foreground/50" : undefined}
+                >
+                  {mes}
+                </option>
+              );
+            })}
+          </select>
+          <ChevronDown
+            className="pointer-events-none absolute right-2.5 h-3.5 w-3.5 text-muted-foreground"
+            aria-hidden="true"
+          />
+        </div>
       )}
 
-      <select
-        id="filtro-ano"
-        value={anoSelecionado}
-        onChange={(e) => handleAnoChange(Number(e.target.value))}
-        className="text-xs border border-border rounded-md px-3 py-1.5 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-        aria-label="Selecionar ano"
-      >
-        {anosDisponiveis.map((ano) => (
-          <option key={ano} value={ano}>
-            {ano}
-          </option>
-        ))}
-      </select>
+      <div className="relative inline-flex items-center">
+        <select
+          id="filtro-ano"
+          value={anoSelecionado}
+          onChange={(e) => handleAnoChange(Number(e.target.value))}
+          className={CLASSE_SELECT_PERIODO}
+          aria-label="Selecionar ano"
+        >
+          {anosDisponiveis.map((ano) => (
+            <option key={ano} value={ano}>
+              {ano}
+            </option>
+          ))}
+        </select>
+        <ChevronDown
+          className="pointer-events-none absolute right-2.5 h-3.5 w-3.5 text-muted-foreground"
+          aria-hidden="true"
+        />
+      </div>
     </div>
   );
 }
