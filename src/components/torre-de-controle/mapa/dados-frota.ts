@@ -1,31 +1,54 @@
 /**
- * Camada de dados do Mapa de Frota (mock).
+ * Camada de dados do Mapa e Escopo de Frota (mock determinístico — V1).
  *
- * É a ÚNICA parte que muda ao ligar o backend (spec, seção 4.3).
- * O mapa só conhece as funções assíncronas exportadas aqui:
- *   - fetchMacro()                         → contagem por UF (visão macro)
- *   - fetchVehiclesByMultipleStates(ufs)   → veículos das UFs no viewport
- *   - fetchVehicleByPlate(placa)           → um veículo (usado pelo "Focar no mapa")
+ * Centraliza os 52 veículos ativos da frota para que TODOS os blocos da
+ * Torre de Controle (KPIs, Mapa Macro/Micro, Tabelas de Atenção, Quadros 2×2,
+ * Assistente de IA e Relatório Gerencial) compartilhem exatamente os mesmos
+ * totais, status e regras de permissão/agrupamento.
  *
- * A frota mockada tem 52 veículos (mesmo número do KPI "Veículos Ativos"), com
- * posições em avenidas reais. Os dados são determinísticos (sem Math.random).
- *
- * TODO(backend): trocar o corpo das funções por `fetch` para a API de telemetria.
+ * TODO(backend): substituir pelas rotas autenticadas da API da Torre de Controle.
  */
 
 import type {
   AlertaVeiculo,
   CategoriaVeiculo,
   ContagemStatus,
+  EscopoFrotaFiltro,
   EstadoBrasil,
+  RegiaoBrasil,
   StatusVeiculo,
   VeiculoFrota,
 } from "@/types/frota-mapa";
-import { VEICULOS_ATENCAO } from "../mock-data";
+import { criarContagemStatusVazia } from "./config";
 import { ESTADOS_BRASIL } from "./estados-brasil";
 
 /* ========================================================= */
-/*  FILIAIS E ENDEREÇOS                                      */
+/*  HIERARQUIA E PERMISSÕES (DEMO DE ESCOPO)                 */
+/* ========================================================= */
+
+/** Os 3 departamentos visíveis quando o perfil simulado é um Admin Restrito */
+export const DEPARTAMENTOS_ADMIN_RESTRITO = [
+  "Operações de Campo",
+  "Comercial & Vendas",
+  "Engenharia & Manutenção",
+] as const;
+
+const LISTA_DEPARTAMENTOS = [
+  "Operações de Campo",
+  "Comercial & Vendas",
+  "Engenharia & Manutenção",
+  "Logística Corporativa",
+  "Diretoria & Administrativo",
+] as const;
+
+const LISTA_UNIDADES_NEGOCIO = [
+  "Operações Urbanas",
+  "Agronegócio & Campo",
+  "Engenharia & Serviços",
+] as const;
+
+/* ========================================================= */
+/*  FILIAIS, CIDADES DE ALOCAÇÃO E ENDEREÇOS                 */
 /* ========================================================= */
 
 interface PontoEndereco {
@@ -36,14 +59,22 @@ interface PontoEndereco {
 
 interface Filial {
   nome: string;
+  cidadeAlocacao: string;
+  centroCidade: { lat: number; lng: number };
   uf: string;
+  regiao: RegiaoBrasil;
   ddd: string;
   pontos: PontoEndereco[];
 }
 
 const FILIAIS: Record<string, Filial> = {
   SPM: {
-    nome: "São Paulo — Matriz", uf: "SP", ddd: "11",
+    nome: "São Paulo — Matriz",
+    cidadeAlocacao: "São Paulo — SP",
+    centroCidade: { lat: -23.5505, lng: -46.6333 },
+    uf: "SP",
+    regiao: "Sudeste",
+    ddd: "11",
     pontos: [
       { endereco: "Av. Paulista, 1578 - Bela Vista, São Paulo - SP", lat: -23.5614, lng: -46.656 },
       { endereco: "Av. Brig. Faria Lima, 3477 - Itaim Bibi, São Paulo - SP", lat: -23.5868, lng: -46.6826 },
@@ -59,7 +90,12 @@ const FILIAIS: Record<string, Filial> = {
     ],
   },
   CPS: {
-    nome: "Campinas", uf: "SP", ddd: "19",
+    nome: "Campinas",
+    cidadeAlocacao: "Campinas — SP",
+    centroCidade: { lat: -22.9056, lng: -47.0608 },
+    uf: "SP",
+    regiao: "Sudeste",
+    ddd: "19",
     pontos: [
       { endereco: "Av. Norte-Sul, 1500 - Cambuí, Campinas - SP", lat: -22.894, lng: -47.053 },
       { endereco: "Av. John Boyd Dunlop, 3900 - Jd. Ipaussurama, Campinas - SP", lat: -22.918, lng: -47.115 },
@@ -69,7 +105,12 @@ const FILIAIS: Record<string, Filial> = {
     ],
   },
   RJ: {
-    nome: "Rio de Janeiro", uf: "RJ", ddd: "21",
+    nome: "Rio de Janeiro",
+    cidadeAlocacao: "Rio de Janeiro — RJ",
+    centroCidade: { lat: -22.9068, lng: -43.1729 },
+    uf: "RJ",
+    regiao: "Sudeste",
+    ddd: "21",
     pontos: [
       { endereco: "Av. Rio Branco, 156 - Centro, Rio de Janeiro - RJ", lat: -22.906, lng: -43.177 },
       { endereco: "Av. das Américas, 4666 - Barra da Tijuca, Rio de Janeiro - RJ", lat: -23.0, lng: -43.365 },
@@ -79,7 +120,12 @@ const FILIAIS: Record<string, Filial> = {
     ],
   },
   BH: {
-    nome: "Belo Horizonte", uf: "MG", ddd: "31",
+    nome: "Belo Horizonte",
+    cidadeAlocacao: "Belo Horizonte — MG",
+    centroCidade: { lat: -19.9167, lng: -43.9345 },
+    uf: "MG",
+    regiao: "Sudeste",
+    ddd: "31",
     pontos: [
       { endereco: "Av. Afonso Pena, 1500 - Centro, Belo Horizonte - MG", lat: -19.9245, lng: -43.9352 },
       { endereco: "Av. do Contorno, 6061 - Savassi, Belo Horizonte - MG", lat: -19.938, lng: -43.933 },
@@ -89,7 +135,12 @@ const FILIAIS: Record<string, Filial> = {
     ],
   },
   CWB: {
-    nome: "Curitiba", uf: "PR", ddd: "41",
+    nome: "Curitiba",
+    cidadeAlocacao: "Curitiba — PR",
+    centroCidade: { lat: -25.4284, lng: -49.2733 },
+    uf: "PR",
+    regiao: "Sul",
+    ddd: "41",
     pontos: [
       { endereco: "Av. Sete de Setembro, 3000 - Rebouças, Curitiba - PR", lat: -25.44, lng: -49.27 },
       { endereco: "Av. Cândido de Abreu, 817 - Centro Cívico, Curitiba - PR", lat: -25.417, lng: -49.269 },
@@ -97,28 +148,48 @@ const FILIAIS: Record<string, Filial> = {
     ],
   },
   POA: {
-    nome: "Porto Alegre", uf: "RS", ddd: "51",
+    nome: "Porto Alegre",
+    cidadeAlocacao: "Porto Alegre — RS",
+    centroCidade: { lat: -30.0346, lng: -51.2177 },
+    uf: "RS",
+    regiao: "Sul",
+    ddd: "51",
     pontos: [
       { endereco: "Av. Ipiranga, 6681 - Partenon, Porto Alegre - RS", lat: -30.059, lng: -51.172 },
       { endereco: "Av. Assis Brasil, 3500 - Cristo Redentor, Porto Alegre - RS", lat: -30.01, lng: -51.155 },
     ],
   },
   IBR: {
-    nome: "Ibirubá", uf: "RS", ddd: "54",
+    nome: "Ibirubá",
+    cidadeAlocacao: "Ibirubá — RS",
+    centroCidade: { lat: -28.6278, lng: -53.0897 },
+    uf: "RS",
+    regiao: "Sul",
+    ddd: "54",
     pontos: [
       { endereco: "Rua Mauá, 1000 - Centro, Ibirubá - RS", lat: -28.628, lng: -53.09 },
       { endereco: "RS-223, km 12 - Ibirubá - RS", lat: -28.605, lng: -53.13 },
     ],
   },
   FLN: {
-    nome: "Florianópolis", uf: "SC", ddd: "48",
+    nome: "Florianópolis",
+    cidadeAlocacao: "Florianópolis — SC",
+    centroCidade: { lat: -27.5954, lng: -48.548 },
+    uf: "SC",
+    regiao: "Sul",
+    ddd: "48",
     pontos: [
       { endereco: "Av. Beira-Mar Norte, 2000 - Centro, Florianópolis - SC", lat: -27.585, lng: -48.548 },
       { endereco: "Rod. SC-401, 4100 - Saco Grande, Florianópolis - SC", lat: -27.55, lng: -48.5 },
     ],
   },
   BSB: {
-    nome: "Brasília", uf: "DF", ddd: "61",
+    nome: "Brasília",
+    cidadeAlocacao: "Brasília — DF",
+    centroCidade: { lat: -15.7939, lng: -47.8828 },
+    uf: "DF",
+    regiao: "Centro-Oeste",
+    ddd: "61",
     pontos: [
       { endereco: "Eixo Monumental - Zona Cívico-Administrativa, Brasília - DF", lat: -15.789, lng: -47.899 },
       { endereco: "SIA Trecho 3 - Guará, Brasília - DF", lat: -15.802, lng: -47.95 },
@@ -126,52 +197,92 @@ const FILIAIS: Record<string, Filial> = {
     ],
   },
   GYN: {
-    nome: "Goiânia", uf: "GO", ddd: "62",
+    nome: "Goiânia",
+    cidadeAlocacao: "Goiânia — GO",
+    centroCidade: { lat: -16.6869, lng: -49.2648 },
+    uf: "GO",
+    regiao: "Centro-Oeste",
+    ddd: "62",
     pontos: [
       { endereco: "Av. T-63, 1200 - Setor Bueno, Goiânia - GO", lat: -16.702, lng: -49.283 },
       { endereco: "Av. Anhanguera, 5000 - Centro, Goiânia - GO", lat: -16.668, lng: -49.255 },
     ],
   },
   CGB: {
-    nome: "Cuiabá", uf: "MT", ddd: "65",
+    nome: "Cuiabá",
+    cidadeAlocacao: "Cuiabá — MT",
+    centroCidade: { lat: -15.6014, lng: -56.0979 },
+    uf: "MT",
+    regiao: "Centro-Oeste",
+    ddd: "65",
     pontos: [
       { endereco: "Av. Historiador Rubens de Mendonça, 2000 - Bosque da Saúde, Cuiabá - MT", lat: -15.58, lng: -56.08 },
     ],
   },
   CGR: {
-    nome: "Campo Grande", uf: "MS", ddd: "67",
+    nome: "Campo Grande",
+    cidadeAlocacao: "Campo Grande — MS",
+    centroCidade: { lat: -20.4697, lng: -54.6201 },
+    uf: "MS",
+    regiao: "Centro-Oeste",
+    ddd: "67",
     pontos: [{ endereco: "Av. Afonso Pena, 3000 - Centro, Campo Grande - MS", lat: -20.46, lng: -54.6 }],
   },
   SSA: {
-    nome: "Salvador", uf: "BA", ddd: "71",
+    nome: "Salvador",
+    cidadeAlocacao: "Salvador — BA",
+    centroCidade: { lat: -12.9714, lng: -38.5014 },
+    uf: "BA",
+    regiao: "Nordeste",
+    ddd: "71",
     pontos: [
       { endereco: "Av. Tancredo Neves, 1632 - Caminho das Árvores, Salvador - BA", lat: -12.98, lng: -38.458 },
       { endereco: "Av. Luís Viana Filho, 6000 - Paralela, Salvador - BA", lat: -12.93, lng: -38.41 },
     ],
   },
   REC: {
-    nome: "Recife", uf: "PE", ddd: "81",
+    nome: "Recife",
+    cidadeAlocacao: "Recife — PE",
+    centroCidade: { lat: -8.0476, lng: -34.877 },
+    uf: "PE",
+    regiao: "Nordeste",
+    ddd: "81",
     pontos: [
       { endereco: "Av. Boa Viagem, 3000 - Boa Viagem, Recife - PE", lat: -8.12, lng: -34.895 },
       { endereco: "Av. Agamenon Magalhães, 2000 - Espinheiro, Recife - PE", lat: -8.048, lng: -34.895 },
     ],
   },
   FOR: {
-    nome: "Fortaleza", uf: "CE", ddd: "85",
+    nome: "Fortaleza",
+    cidadeAlocacao: "Fortaleza — CE",
+    centroCidade: { lat: -3.7319, lng: -38.5267 },
+    uf: "CE",
+    regiao: "Nordeste",
+    ddd: "85",
     pontos: [
       { endereco: "Av. Beira Mar, 3000 - Meireles, Fortaleza - CE", lat: -3.725, lng: -38.498 },
       { endereco: "Av. Washington Soares, 85 - Edson Queiroz, Fortaleza - CE", lat: -3.79, lng: -38.48 },
     ],
   },
   MAO: {
-    nome: "Manaus", uf: "AM", ddd: "92",
+    nome: "Manaus",
+    cidadeAlocacao: "Manaus — AM",
+    centroCidade: { lat: -3.119, lng: -60.0217 },
+    uf: "AM",
+    regiao: "Norte",
+    ddd: "92",
     pontos: [
       { endereco: "Av. Djalma Batista, 1661 - Chapada, Manaus - AM", lat: -3.09, lng: -60.02 },
       { endereco: "Av. Buriti, 3000 - Distrito Industrial, Manaus - AM", lat: -3.12, lng: -59.96 },
     ],
   },
   BEL: {
-    nome: "Belém", uf: "PA", ddd: "91",
+    nome: "Belém",
+    cidadeAlocacao: "Belém — PA",
+    centroCidade: { lat: -1.4558, lng: -48.4902 },
+    uf: "PA",
+    regiao: "Norte",
+    ddd: "91",
     pontos: [
       { endereco: "Av. Almirante Barroso, 2500 - Marco, Belém - PA", lat: -1.43, lng: -48.46 },
       { endereco: "Av. Nazaré, 1000 - Nazaré, Belém - PA", lat: -1.452, lng: -48.485 },
@@ -204,82 +315,145 @@ const MODELOS: Record<string, { categoria: CategoriaVeiculo; combustivel: string
 };
 
 /* ========================================================= */
-/*  FROTA (52 veículos)                                      */
+/*  REGRA OFICIAL DE STATUS E PRECEDÊNCIA (PDF 13/11/2026)   */
 /* ========================================================= */
 
-/** [placa, modelo, condutor, status, filial, grupo, locadora] */
-type LinhaFrota = [string, string, string, StatusVeiculo, keyof typeof FILIAIS, string, string];
+/**
+ * Calcula o status exclusivo de cada veículo no mapa:
+ * - `Em Oficina` prevalece sobre qualquer outro status, com ou sem telemetria.
+ * - `Sem telemetria` vale para veículos sem equipamento ativo (e fora da oficina).
+ * - `Sem posição` vale quando há telemetria, mas sem transmissão há > 7 dias (168h).
+ * - `Em Rota` vale quando a última posição tem ≤ 5h e velocidade ≠ 0.
+ * - `Parado` cobre os demais veículos com telemetria até 7 dias (velocidade = 0 ou > 5h).
+ */
+export function calcularStatusVeiculoMapa(params: {
+  emOficina: boolean;
+  temTelemetria: boolean;
+  horasDesdeUltimaPosicao: number | null;
+  velocidade: number;
+}): StatusVeiculo {
+  if (params.emOficina) return "maintenance";
+  if (!params.temTelemetria || params.horasDesdeUltimaPosicao === null) return "no_telemetry";
+  if (params.horasDesdeUltimaPosicao > 24 * 7) return "no_position";
+  if (params.horasDesdeUltimaPosicao <= 5 && params.velocidade !== 0) return "in_transit";
+  return "stopped";
+}
 
+/* ========================================================= */
+/*  CENÁRIOS DETERMINÍSTICOS DOS 52 VEÍCULOS                 */
+/* ========================================================= */
+
+type PerfilOperacional =
+  | "em_rota"
+  | "parado_recente"
+  | "parado_mais_5h"
+  | "oficina_com_telemetria"
+  | "oficina_sem_telemetria"
+  | "sem_posicao_7d"
+  | "sem_telemetria";
+
+/** [placa, modelo, condutor, perfilOperacional, filial, locadora] */
+type LinhaFrota = [
+  string,
+  string,
+  string,
+  PerfilOperacional,
+  keyof typeof FILIAIS,
+  string,
+];
+
+/**
+ * Frota de 52 veículos ativos:
+ * - 22 Em Rota (`in_transit`)
+ * - 17 Parados (`stopped`)
+ * -  3 Em Oficina (`maintenance` — 2 com telemetria e 1 sem telemetria, validando precedência)
+ * -  4 Sem posição há > 7 dias (`no_position`)
+ * -  6 Sem telemetria (`no_telemetry` — posicionados pela cidade de alocação)
+ * Soma = 52 veículos.
+ */
 const LINHAS_FROTA: LinhaFrota[] = [
   // São Paulo — Matriz (11)
-  ["SVR2C84", "Fiat Strada", "Carlos Mendes", "parked", "SPM", "Comgás", "Localiza"],
-  ["MKP2D45", "Renault Kwid", "Luiza Costa", "parked", "SPM", "Vivo", "Movida"],
-  ["FGT1B23", "Chevrolet Onix", "Bruno Carvalho", "in_transit", "SPM", "Comgás", "Localiza"],
-  ["KLM4D56", "Fiat Fiorino", "Ricardo Nogueira", "in_transit", "SPM", "Comgás", "Unidas"],
-  ["GHJ7E89", "Toyota Hilux", "Thiago Rocha", "in_transit", "SPM", "Comgás", "Localiza"],
-  ["RTY2F34", "Hyundai HB20", "Camila Duarte", "in_transit", "SPM", "Vivo", "Movida"],
-  ["QWE5G67", "Honda CG 160", "Diego Martins", "in_transit", "SPM", "Vivo", "Frota Própria"],
-  ["ASD8H90", "VW Polo", "Juliana Prado", "parked", "SPM", "Comgás", "Localiza"],
-  ["ZXC3J12", "Renault Master", "Marcelo Tavares", "depot", "SPM", "Comgás", "Unidas"],
-  ["POI6K45", "Fiat Toro", "Gustavo Henrique", "in_transit", "SPM", "Comgás", "Localiza"],
-  ["LKJ9L78", "VW Gol", "Patrícia Gomes", "parked", "SPM", "Vivo", "Movida"],
+  ["SVR2C84", "Fiat Strada", "Carlos Mendes", "parado_recente", "SPM", "Localiza"],
+  ["MKP2D45", "Renault Kwid", "Luiza Costa", "parado_mais_5h", "SPM", "Movida"],
+  ["FGT1B23", "Chevrolet Onix", "Bruno Carvalho", "em_rota", "SPM", "Localiza"],
+  ["KLM4D56", "Fiat Fiorino", "Ricardo Nogueira", "em_rota", "SPM", "Unidas"],
+  ["GHJ7E89", "Toyota Hilux", "Thiago Rocha", "em_rota", "SPM", "Localiza"],
+  ["RTY2F34", "Hyundai HB20", "Camila Duarte", "em_rota", "SPM", "Movida"],
+  ["QWE5G67", "Honda CG 160", "Diego Martins", "em_rota", "SPM", "Frota Própria"],
+  ["ASD8H90", "VW Polo", "Juliana Prado", "parado_recente", "SPM", "Localiza"],
+  ["ZXC3J12", "Renault Master", "Marcelo Tavares", "sem_posicao_7d", "SPM", "Unidas"],
+  ["POI6K45", "Fiat Toro", "Gustavo Henrique", "em_rota", "SPM", "Localiza"],
+  ["LKJ9L78", "VW Gol", "Patrícia Gomes", "parado_mais_5h", "SPM", "Movida"],
   // Campinas (5)
-  ["QRN8H73", "VW Saveiro", "Sem condutor vinculado", "maintenance", "CPS", "Comgás", "Localiza"],
-  ["PTZ5B60", "VW Polo", "Rafael Souza", "depot", "CPS", "Vivo", "Movida"],
-  ["MNB2M34", "Fiat Strada", "Leandro Pires", "in_transit", "CPS", "Comgás", "Localiza"],
-  ["VCX5N67", "Chevrolet Onix", "Aline Ribeiro", "parked", "CPS", "Vivo", "Unidas"],
-  ["BVN8P90", "Peugeot Partner", "Eduardo Lopes", "in_transit", "CPS", "Comgás", "Frota Própria"],
+  ["QRN8H73", "VW Saveiro", "Sem condutor vinculado", "oficina_com_telemetria", "CPS", "Localiza"],
+  ["PTZ5B60", "VW Polo", "Rafael Souza", "sem_telemetria", "CPS", "Movida"],
+  ["MNB2M34", "Fiat Strada", "Leandro Pires", "em_rota", "CPS", "Localiza"],
+  ["VCX5N67", "Chevrolet Onix", "Aline Ribeiro", "parado_recente", "CPS", "Unidas"],
+  ["BVN8P90", "Peugeot Partner", "Eduardo Lopes", "em_rota", "CPS", "Frota Própria"],
   // Rio de Janeiro (5)
-  ["BRA4E21", "Chevrolet Onix", "João Silva", "in_transit", "RJ", "Vivo", "Movida"],
-  ["RIO3Q12", "Fiat Strada", "Vinícius Araújo", "in_transit", "RJ", "Vivo", "Localiza"],
-  ["GUA6R45", "Hyundai HB20", "Renata Moreira", "parked", "RJ", "Vivo", "Unidas"],
-  ["CPB9S78", "Fiat Fiorino", "André Cardoso", "depot", "RJ", "Vivo", "Localiza"],
-  ["NIT2T01", "Yamaha Factor 150", "Felipe Barros", "in_transit", "RJ", "Vivo", "Frota Própria"],
+  ["BRA4E21", "Chevrolet Onix", "João Silva", "em_rota", "RJ", "Movida"],
+  ["RIO3Q12", "Fiat Strada", "Vinícius Araújo", "em_rota", "RJ", "Localiza"],
+  ["GUA6R45", "Hyundai HB20", "Renata Moreira", "parado_recente", "RJ", "Unidas"],
+  ["CPB9S78", "Fiat Fiorino", "André Cardoso", "sem_posicao_7d", "RJ", "Localiza"],
+  ["NIT2T01", "Yamaha Factor 150", "Felipe Barros", "em_rota", "RJ", "Frota Própria"],
   // Belo Horizonte (5)
-  ["RDX7J99", "Fiat Mobi", "Ana Paula", "in_transit", "BH", "Vivo", "Movida"],
-  ["MGA4U23", "VW Saveiro", "Rodrigo Teixeira", "parked", "BH", "Vivo", "Localiza"],
-  ["PAM7V56", "Chevrolet S10", "Henrique Dias", "in_transit", "BH", "Vivo", "Unidas"],
-  ["SAV1W89", "Renault Kwid", "Larissa Fonseca", "parked", "BH", "Vivo", "Movida"],
-  ["CTG5X12", "Fiat Strada", "Otávio Ramos", "maintenance", "BH", "Vivo", "Localiza"],
+  ["RDX7J99", "Fiat Mobi", "Ana Paula", "em_rota", "BH", "Movida"],
+  ["MGA4U23", "VW Saveiro", "Rodrigo Teixeira", "parado_mais_5h", "BH", "Localiza"],
+  ["PAM7V56", "Chevrolet S10", "Henrique Dias", "em_rota", "BH", "Unidas"],
+  ["SAV1W89", "Renault Kwid", "Larissa Fonseca", "parado_recente", "BH", "Movida"],
+  ["CTG5X12", "Fiat Strada", "Otávio Ramos", "oficina_com_telemetria", "BH", "Localiza"],
   // Curitiba (3)
-  ["HST3A16", "Toyota Hilux", "Pedro Alves", "depot", "CWB", "Vivo", "Localiza"],
-  ["PRN8Y34", "VW Polo", "Mariana Kowalski", "in_transit", "CWB", "Vivo", "Movida"],
-  ["BAT2Z67", "Fiat Fiorino", "Jefferson Lima", "parked", "CWB", "Vivo", "Unidas"],
-  // Porto Alegre (2) e Ibirubá (2) — Coprel
-  ["GAU6A90", "Chevrolet S10", "Cristiano Becker", "in_transit", "POA", "Coprel", "Localiza"],
-  ["IPI9B12", "Hyundai HB20", "Daniela Schmitt", "parked", "POA", "Coprel", "Movida"],
-  ["CPR3C45", "Toyota Hilux", "Lucas Weber", "in_transit", "IBR", "Coprel", "Frota Própria"],
-  ["IBR7D78", "Ford Ranger", "Márcio Klein", "depot", "IBR", "Coprel", "Frota Própria"],
+  ["HST3A16", "Toyota Hilux", "Pedro Alves", "sem_telemetria", "CWB", "Localiza"],
+  ["PRN8Y34", "VW Polo", "Mariana Kowalski", "em_rota", "CWB", "Movida"],
+  ["BAT2Z67", "Fiat Fiorino", "Jefferson Lima", "parado_recente", "CWB", "Unidas"],
+  // Porto Alegre (2) e Ibirubá (2)
+  ["GAU6A90", "Chevrolet S10", "Cristiano Becker", "em_rota", "POA", "Localiza"],
+  ["IPI9B12", "Hyundai HB20", "Daniela Schmitt", "parado_mais_5h", "POA", "Movida"],
+  ["CPR3C45", "Toyota Hilux", "Lucas Weber", "em_rota", "IBR", "Frota Própria"],
+  ["IBR7D78", "Ford Ranger", "Márcio Klein", "sem_telemetria", "IBR", "Frota Própria"],
   // Florianópolis (2)
-  ["SCF1E01", "Fiat Strada", "Tatiane Silveira", "in_transit", "FLN", "Vivo", "Localiza"],
-  ["BMN4F34", "Renault Kwid", "Igor Medeiros", "parked", "FLN", "Vivo", "Movida"],
+  ["SCF1E01", "Fiat Strada", "Tatiane Silveira", "em_rota", "FLN", "Localiza"],
+  ["BMN4F34", "Renault Kwid", "Igor Medeiros", "parado_recente", "FLN", "Movida"],
   // Centro-Oeste (7)
-  ["DFB8G67", "Chevrolet Onix", "Paulo Roberto", "in_transit", "BSB", "Vivo", "Localiza"],
-  ["ESP2H90", "Fiat Toro", "Sabrina Castro", "parked", "BSB", "Vivo", "Unidas"],
-  ["PLN5J23", "VW Gol", "Wesley Santana", "depot", "BSB", "Vivo", "Movida"],
-  ["GOI9K56", "Fiat Strada", "Rogério Matos", "in_transit", "GYN", "Vivo", "Localiza"],
-  ["ANH3L89", "Hyundai HB20", "Bianca Freitas", "parked", "GYN", "Vivo", "Movida"],
-  ["MTC6M12", "Toyota Hilux", "Fábio Nunes", "in_transit", "CGB", "Vivo", "Localiza"],
-  ["MSA1N45", "Chevrolet S10", "Vanessa Rezende", "maintenance", "CGR", "Vivo", "Unidas"],
+  ["DFB8G67", "Chevrolet Onix", "Paulo Roberto", "em_rota", "BSB", "Localiza"],
+  ["ESP2H90", "Fiat Toro", "Sabrina Castro", "parado_recente", "BSB", "Unidas"],
+  ["PLN5J23", "VW Gol", "Wesley Santana", "sem_posicao_7d", "BSB", "Movida"],
+  ["GOI9K56", "Fiat Strada", "Rogério Matos", "em_rota", "GYN", "Localiza"],
+  ["ANH3L89", "Hyundai HB20", "Bianca Freitas", "parado_mais_5h", "GYN", "Movida"],
+  ["MTC6M12", "Toyota Hilux", "Fábio Nunes", "em_rota", "CGB", "Localiza"],
+  ["MSA1N45", "Chevrolet S10", "Vanessa Rezende", "oficina_sem_telemetria", "CGR", "Unidas"],
   // Nordeste (6)
-  ["BAH4P78", "Fiat Strada", "Antônio Brito", "in_transit", "SSA", "Vivo", "Localiza"],
-  ["SSA8Q01", "VW Polo", "Luana Menezes", "parked", "SSA", "Vivo", "Movida"],
-  ["PER2R34", "Renault Kwid", "Gabriel Cavalcanti", "in_transit", "REC", "Vivo", "Movida"],
-  ["REC5S67", "Fiat Fiorino", "Elaine Pacheco", "depot", "REC", "Vivo", "Unidas"],
-  ["CEA9T90", "Chevrolet Onix", "Francisco Holanda", "in_transit", "FOR", "Vivo", "Localiza"],
-  ["FOR3U23", "Honda CG 160", "Raimundo Sales", "parked", "FOR", "Vivo", "Frota Própria"],
+  ["BAH4P78", "Fiat Strada", "Antônio Brito", "em_rota", "SSA", "Localiza"],
+  ["SSA8Q01", "VW Polo", "Luana Menezes", "parado_recente", "SSA", "Movida"],
+  ["PER2R34", "Renault Kwid", "Gabriel Cavalcanti", "em_rota", "REC", "Movida"],
+  ["REC5S67", "Fiat Fiorino", "Elaine Pacheco", "sem_telemetria", "REC", "Unidas"],
+  ["CEA9T90", "Chevrolet Onix", "Francisco Holanda", "parado_mais_5h", "FOR", "Localiza"],
+  ["FOR3U23", "Honda CG 160", "Raimundo Sales", "sem_telemetria", "FOR", "Frota Própria"],
   // Norte (4)
-  ["AMZ6V56", "Toyota Hilux", "Sérgio Lima", "depot", "MAO", "Vivo", "Localiza"],
-  ["MAN1W89", "Fiat Strada", "Kátia Monteiro", "in_transit", "MAO", "Vivo", "Movida"],
-  ["PAR4X12", "VW Saveiro", "Josué Farias", "depot", "BEL", "Vivo", "Unidas"],
-  ["BEL7Y45", "Hyundai HB20", "Priscila Barros", "parked", "BEL", "Vivo", "Movida"],
+  ["AMZ6V56", "Toyota Hilux", "Sérgio Lima", "sem_posicao_7d", "MAO", "Localiza"],
+  ["MAN1W89", "Fiat Strada", "Kátia Monteiro", "em_rota", "MAO", "Movida"],
+  ["PAR4X12", "VW Saveiro", "Josué Farias", "sem_telemetria", "BEL", "Unidas"],
+  ["BEL7Y45", "Hyundai HB20", "Priscila Barros", "parado_recente", "BEL", "Movida"],
 ];
+
+/* ========================================================= */
+/*  ALERTAS OPERACIONAIS POR PLACA                           */
+/* ========================================================= */
+
+const ALERTAS_POR_PLACA = new Map<string, { alerta: AlertaVeiculo; km: number }>([
+  ["SVR2C84", { alerta: { nivel: "critico", descricao: "Revisão vencida há 42 dias" }, km: 61240 }],
+  ["QRN8H73", { alerta: { nivel: "critico", descricao: "Sinistro em aberto · O.S. ativa" }, km: 48902 }],
+  ["BRA4E21", { alerta: { nivel: "atencao", descricao: "CNH vence em 18 dias" }, km: 35117 }],
+  ["RDX7J99", { alerta: { nivel: "atencao", descricao: "KM 32% acima da média" }, km: 72586 }],
+  ["HST3A16", { alerta: { nivel: "atencao", descricao: "Licenciamento a vencer" }, km: 54330 }],
+  ["MKP2D45", { alerta: { nivel: "atencao", descricao: "Multa pendente de identificação" }, km: 22408 }],
+  ["ZXC3J12", { alerta: { nivel: "atencao", descricao: "Sem sinal de telemetria há 11 dias" }, km: 68190 }],
+]);
 
 /* ========================================================= */
 /*  GERADOR DETERMINÍSTICO                                   */
 /* ========================================================= */
 
-/** Hash simples de string → número (mesma placa gera sempre os mesmos valores) */
 function hashTexto(texto: string): number {
   let hash = 0;
   for (let i = 0; i < texto.length; i++) {
@@ -288,36 +462,107 @@ function hashTexto(texto: string): number {
   return hash;
 }
 
-/** Número pseudoaleatório determinístico entre min e max (inclusive) */
 function numeroEntre(semente: string, min: number, max: number): number {
   return min + (hashTexto(semente) % (max - min + 1));
 }
 
-/** Converte "61.240 km" em 61240 */
-function kmTextoParaNumero(texto: string): number {
-  return Number(texto.replace(/\D/g, ""));
+function escolherUnidadeNegocio(regiao: RegiaoBrasil, categoria: CategoriaVeiculo): string {
+  if (regiao === "Centro-Oeste" || regiao === "Sul") {
+    return categoria === "pickup" ? LISTA_UNIDADES_NEGOCIO[1] : LISTA_UNIDADES_NEGOCIO[0];
+  }
+  if (categoria === "van") return LISTA_UNIDADES_NEGOCIO[2];
+  return LISTA_UNIDADES_NEGOCIO[0];
 }
 
-const ALERTAS_POR_PLACA = new Map<string, { alerta: AlertaVeiculo; km: number }>(
-  VEICULOS_ATENCAO.map((v) => [
-    v.placa,
-    {
-      alerta: { nivel: v.status === "Crítico" ? "critico" : "atencao", descricao: v.pendencia },
-      km: kmTextoParaNumero(v.km),
-    },
-  ])
-);
-
-function montarVeiculo(linha: LinhaFrota, indiceNaFilial: number): VeiculoFrota {
-  const [placa, modelo, condutor, status, chaveFilial, grupo, locadora] = linha;
+function montarVeiculo(linha: LinhaFrota, indiceNaFilial: number, indiceGlobal: number): VeiculoFrota {
+  const [placa, modelo, condutor, perfil, chaveFilial, locadora] = linha;
   const filial = FILIAIS[chaveFilial];
-  const ponto = filial.pontos[indiceNaFilial % filial.pontos.length];
   const infoModelo = MODELOS[modelo];
   const infoAlerta = ALERTAS_POR_PLACA.get(placa);
-  const emRota = status === "in_transit";
 
-  const hora = String(numeroEntre(placa + "h", 6, 9)).padStart(2, "0");
-  const minuto = String(numeroEntre(placa + "m", 0, 59)).padStart(2, "0");
+  const temTelemetria = perfil !== "sem_telemetria" && perfil !== "oficina_sem_telemetria";
+  const emOficina = perfil === "oficina_com_telemetria" || perfil === "oficina_sem_telemetria";
+
+  // Velocidade e idade da última posição conforme o perfil operacional
+  let velocidade = 0;
+  let horasDesdeUltimaPosicao: number | null = null;
+  let dataHoraUltimaPosicao: string | null = null;
+  let lastTransmission = "";
+
+  if (!temTelemetria) {
+    velocidade = 0;
+    horasDesdeUltimaPosicao = null;
+    dataHoraUltimaPosicao = null;
+    lastTransmission = emOficina
+      ? `O.S. aberta · Alocação cadastral (${filial.cidadeAlocacao})`
+      : `Posicionado pelo cadastro · ${filial.cidadeAlocacao}`;
+  } else if (perfil === "em_rota") {
+    velocidade = numeroEntre(placa + "vel", 22, 78);
+    horasDesdeUltimaPosicao = numeroEntre(placa + "hr", 1, 4);
+    const hora = String(14 - Math.min(horasDesdeUltimaPosicao, 4)).padStart(2, "0");
+    const minuto = String(numeroEntre(placa + "min", 10, 58)).padStart(2, "0");
+    dataHoraUltimaPosicao = `13/11/2026 às ${hora}:${minuto}`;
+    lastTransmission = `Hoje, ${hora}:${minuto} · há ${horasDesdeUltimaPosicao}h`;
+  } else if (perfil === "parado_recente") {
+    velocidade = 0;
+    horasDesdeUltimaPosicao = numeroEntre(placa + "hrp", 1, 4);
+    const hora = String(14 - Math.min(horasDesdeUltimaPosicao, 4)).padStart(2, "0");
+    const minuto = String(numeroEntre(placa + "minp", 5, 55)).padStart(2, "0");
+    dataHoraUltimaPosicao = `13/11/2026 às ${hora}:${minuto}`;
+    lastTransmission = `Hoje, ${hora}:${minuto} · parado (0 km/h)`;
+  } else if (perfil === "parado_mais_5h") {
+    // Regra #2: posição recebida há mais de 5h e até 7 dias → Parado (mesmo se última velocidade != 0)
+    velocidade = numeroEntre(placa + "vel5", 0, 1) === 1 ? numeroEntre(placa + "v5", 15, 42) : 0;
+    const diasAtras = numeroEntre(placa + "dias", 1, 4);
+    horasDesdeUltimaPosicao = diasAtras * 24 + numeroEntre(placa + "h5", 2, 10);
+    const diaMes = String(13 - diasAtras).padStart(2, "0");
+    const hora = String(numeroEntre(placa + "hr5", 8, 19)).padStart(2, "0");
+    const minuto = String(numeroEntre(placa + "mn5", 10, 55)).padStart(2, "0");
+    dataHoraUltimaPosicao = `${diaMes}/11/2026 às ${hora}:${minuto}`;
+    lastTransmission = `${diaMes}/11 às ${hora}:${minuto} · há ${diasAtras}d`;
+  } else if (perfil === "oficina_com_telemetria") {
+    velocidade = 0;
+    horasDesdeUltimaPosicao = 18;
+    const hora = String(numeroEntre(placa + "hro", 8, 17)).padStart(2, "0");
+    const minuto = String(numeroEntre(placa + "mno", 10, 50)).padStart(2, "0");
+    dataHoraUltimaPosicao = `12/11/2026 às ${hora}:${minuto}`;
+    lastTransmission = `O.S. aberta · Última pos. 12/11 às ${hora}:${minuto}`;
+  } else {
+    // sem_posicao_7d: > 7 dias sem transmitir
+    velocidade = 0;
+    const diasSemSinal = numeroEntre(placa + "sem", 9, 15);
+    horasDesdeUltimaPosicao = diasSemSinal * 24;
+    const diaOutubroOuNov = 13 - diasSemSinal;
+    const dataFormatada =
+      diaOutubroOuNov >= 1
+        ? `${String(diaOutubroOuNov).padStart(2, "0")}/11/2026`
+        : `${String(31 + diaOutubroOuNov).padStart(2, "0")}/10/2026`;
+    const hora = String(numeroEntre(placa + "hrs", 7, 19)).padStart(2, "0");
+    const minuto = String(numeroEntre(placa + "mns", 10, 55)).padStart(2, "0");
+    dataHoraUltimaPosicao = `${dataFormatada} às ${hora}:${minuto}`;
+    lastTransmission = `Sem sinal há ${diasSemSinal} dias (${dataFormatada})`;
+  }
+
+  const status = calcularStatusVeiculoMapa({
+    emOficina,
+    temTelemetria,
+    horasDesdeUltimaPosicao,
+    velocidade,
+  });
+
+  // Coordenada: telemetria usa última posição real na via; sem telemetria usa a cidade de alocação do cadastro
+  const pontoVia = filial.pontos[indiceNaFilial % filial.pontos.length];
+  const desvioLatCadastro = ((indiceGlobal % 5) - 2) * 0.0042;
+  const desvioLngCadastro = (((indiceGlobal * 3) % 5) - 2) * 0.0042;
+
+  const lat = temTelemetria ? pontoVia.lat : filial.centroCidade.lat + desvioLatCadastro;
+  const lng = temTelemetria ? pontoVia.lng : filial.centroCidade.lng + desvioLngCadastro;
+  const address = temTelemetria
+    ? pontoVia.endereco
+    : `${filial.cidadeAlocacao} (Cidade de alocação do cadastro)`;
+
+  const departamento = LISTA_DEPARTAMENTOS[indiceGlobal % LISTA_DEPARTAMENTOS.length];
+  const unidadeNegocio = escolherUnidadeNegocio(filial.regiao, infoModelo.categoria);
   const finalTelefone = String(numeroEntre(placa + "t", 1000, 9999));
 
   return {
@@ -329,106 +574,190 @@ function montarVeiculo(linha: LinhaFrota, indiceNaFilial: number): VeiculoFrota 
     driver: condutor,
     driverPhone: `(${filial.ddd}) 9${numeroEntre(placa + "p", 7000, 9999)}-${finalTelefone}`,
     status,
-    speed: emRota ? numeroEntre(placa + "v", 18, 78) : 0,
-    heading: numeroEntre(placa + "d", 0, 359),
+    temTelemetria,
+    emOficina,
+    origemPosicao: temTelemetria ? "telemetria" : "cadastro",
+    dataHoraUltimaPosicao,
+    cidadeAlocacao: filial.cidadeAlocacao,
+    speed: status === "in_transit" ? velocidade : 0,
+    heading: temTelemetria ? numeroEntre(placa + "d", 0, 359) : 0,
     odometer: infoAlerta?.km ?? numeroEntre(placa + "o", 12000, 95000),
-    fuelLevel: numeroEntre(placa + "f", 14, 96),
-    batteryLevel: status === "maintenance" ? numeroEntre(placa + "b", 40, 70) : numeroEntre(placa + "b", 86, 100),
-    grupo,
+    fuelLevel: temTelemetria ? numeroEntre(placa + "f", 18, 96) : 0,
+    batteryLevel: temTelemetria
+      ? status === "maintenance" || status === "no_position"
+        ? numeroEntre(placa + "b", 42, 72)
+        : numeroEntre(placa + "b", 86, 100)
+      : 0,
     filial: filial.nome,
+    regiao: filial.regiao,
+    regional: `Regional ${filial.regiao}`,
+    unidadeNegocio,
+    departamento,
     locadora,
     state: filial.uf,
-    lat: ponto.lat,
-    lng: ponto.lng,
-    address: ponto.endereco,
-    lastTransmission: `Hoje, ${hora}:${minuto} (Carga diária de telemetria)`,
+    lat,
+    lng,
+    address,
+    lastTransmission,
     alerta: infoAlerta?.alerta ?? null,
   };
 }
 
-/** Frota completa montada uma única vez (simula o banco de telemetria) */
-const FROTA: VeiculoFrota[] = (() => {
+/** Frota completa montada uma única vez (52 veículos ativos) */
+export const FROTA_COMPLETA: VeiculoFrota[] = (() => {
   const contadorPorFilial: Record<string, number> = {};
-  return LINHAS_FROTA.map((linha) => {
+  return LINHAS_FROTA.map((linha, indiceGlobal) => {
     const chave = linha[4];
     const indice = contadorPorFilial[chave] ?? 0;
     contadorPorFilial[chave] = indice + 1;
-    return montarVeiculo(linha, indice);
+    return montarVeiculo(linha, indice, indiceGlobal);
   });
 })();
 
 /* ========================================================= */
-/*  API MOCK                                                 */
+/*  FILTRAGEM POR ESCOPO DE PERMISSÃO E AGRUPAMENTO          */
 /* ========================================================= */
 
-const ATRASO_MS = 100;
-const esperar = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+/**
+ * Aplica simultaneamente:
+ * 1. O escopo máximo permitido pelo perfil do usuário (ex.: Admin restrito a 3 departamentos);
+ * 2. O valor selecionado no filtro de agrupamento (Filial, Regional, UN ou Departamento);
+ * 3. O filtro de Locadora.
+ */
+export function filtrarFrotaPorEscopo(escopo?: EscopoFrotaFiltro): VeiculoFrota[] {
+  if (!escopo) return FROTA_COMPLETA;
 
-/** Cache em memória por UF: voltar a um estado já visto não refaz a "requisição" */
-const cachePorUf = new Map<string, VeiculoFrota[]>();
+  const departamentosPermitidos = new Set<string>(DEPARTAMENTOS_ADMIN_RESTRITO);
 
-function contagemStatusVazia(): ContagemStatus {
-  return { in_transit: 0, parked: 0, depot: 0, maintenance: 0 };
+  return FROTA_COMPLETA.filter((veiculo) => {
+    // 1. Limite de permissão do perfil
+    if (
+      escopo.perfilDemo === "departamentos_restrito" &&
+      !departamentosPermitidos.has(veiculo.departamento)
+    ) {
+      return false;
+    }
+
+    // 2. Filtro de agrupamento escolhido no topo
+    if (escopo.agrupamento && escopo.agrupamento !== "todos") {
+      if (escopo.perfilDemo === "filiais" && veiculo.filial !== escopo.agrupamento) return false;
+      if (escopo.perfilDemo === "regionais" && veiculo.regional !== escopo.agrupamento) return false;
+      if (escopo.perfilDemo === "unidades" && veiculo.unidadeNegocio !== escopo.agrupamento) return false;
+      if (
+        escopo.perfilDemo === "departamentos_restrito" &&
+        veiculo.departamento !== escopo.agrupamento
+      ) {
+        return false;
+      }
+    }
+
+    // 3. Filtro de locadora
+    if (escopo.locadora && escopo.locadora !== "todas" && veiculo.locadora !== escopo.locadora) {
+      return false;
+    }
+
+    return true;
+  });
 }
 
-/** Visão macro: todos os estados com a contagem de veículos (total e por status) */
-export async function fetchMacro(): Promise<{ estados: EstadoBrasil[] }> {
+/* ========================================================= */
+/*  API MOCK DO MAPA                                         */
+/* ========================================================= */
+
+const ATRASO_MS = 80;
+const esperar = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function chaveCacheEscopo(escopo?: EscopoFrotaFiltro): string {
+  if (!escopo) return "padrao";
+  return `${escopo.perfilDemo}|${escopo.agrupamento}|${escopo.locadora}`;
+}
+
+/** Cache em memória por escopo + UF */
+const cachePorEscopoUf = new Map<string, VeiculoFrota[]>();
+
+/** Visão macro: todos os estados com a contagem de veículos (total e nos 5 status) */
+export async function fetchMacro(escopo?: EscopoFrotaFiltro): Promise<{
+  estados: EstadoBrasil[];
+  veiculosEscopo: VeiculoFrota[];
+}> {
   await esperar(ATRASO_MS);
+  const frotaEscopo = filtrarFrotaPorEscopo(escopo);
   const estados = ESTADOS_BRASIL.map((estado) => {
-    const statusCounts = contagemStatusVazia();
-    const veiculosDoEstado = FROTA.filter((v) => v.state === estado.uf);
+    const statusCounts = criarContagemStatusVazia();
+    const veiculosDoEstado = frotaEscopo.filter((v) => v.state === estado.uf);
     veiculosDoEstado.forEach((v) => statusCounts[v.status]++);
     return { ...estado, vehicleCount: veiculosDoEstado.length, statusCounts };
   });
-  return { estados };
+  return { estados, veiculosEscopo: frotaEscopo };
 }
 
-/** Visão micro: veículos das UFs informadas (com cache por UF) */
-export async function fetchVehiclesByMultipleStates(ufs: string[]): Promise<VeiculoFrota[]> {
-  const pendentes = ufs.filter((uf) => !cachePorUf.has(uf));
+/** Visão micro: veículos das UFs informadas respeitando o escopo atual */
+export async function fetchVehiclesByMultipleStates(
+  ufs: string[],
+  escopo?: EscopoFrotaFiltro
+): Promise<VeiculoFrota[]> {
+  const prefixo = chaveCacheEscopo(escopo);
+  const frotaEscopo = filtrarFrotaPorEscopo(escopo);
+  const pendentes = ufs.filter((uf) => !cachePorEscopoUf.has(`${prefixo}:${uf}`));
+
   if (pendentes.length > 0) {
     await esperar(ATRASO_MS);
     pendentes.forEach((uf) => {
-      cachePorUf.set(uf, FROTA.filter((v) => v.state === uf));
+      cachePorEscopoUf.set(
+        `${prefixo}:${uf}`,
+        frotaEscopo.filter((v) => v.state === uf)
+      );
     });
   }
-  return ufs.flatMap((uf) => cachePorUf.get(uf) ?? []);
+
+  return ufs.flatMap((uf) => cachePorEscopoUf.get(`${prefixo}:${uf}`) ?? []);
 }
 
-/** Busca um veículo pela placa (usado pelo "Focar veículo no mapa") */
-export async function fetchVehicleByPlate(placa: string): Promise<VeiculoFrota | null> {
+/** Busca um veículo pela placa dentro do escopo permitido (usado pelo "Focar veículo no mapa") */
+export async function fetchVehicleByPlate(
+  placa: string,
+  escopo?: EscopoFrotaFiltro
+): Promise<VeiculoFrota | null> {
   await esperar(ATRASO_MS);
   const placaNormalizada = placa.trim().toUpperCase();
-  return FROTA.find((v) => v.plate === placaNormalizada) ?? null;
+  const frotaEscopo = filtrarFrotaPorEscopo(escopo);
+  return frotaEscopo.find((v) => v.plate === placaNormalizada) ?? null;
 }
 
-/** Lista de placas existentes (usada pelo Assistente de IA para reconhecer placas) */
-export const PLACAS_FROTA: string[] = FROTA.map((v) => v.plate);
+/** Lista de placas existentes na frota (usada pelo Assistente de IA) */
+export const PLACAS_FROTA: string[] = FROTA_COMPLETA.map((v) => v.plate);
 
-/**
- * Busca síncrona por placa — apenas para o Assistente de IA mock montar respostas.
- * TODO(backend): a IA real consultará a API; remover este helper na integração.
- */
-export function obterVeiculoPorPlaca(placa: string): VeiculoFrota | null {
-  return FROTA.find((v) => v.plate === placa.trim().toUpperCase()) ?? null;
+/** Busca síncrona por placa para o Assistente de IA mock */
+export function obterVeiculoPorPlaca(
+  placa: string,
+  escopo?: EscopoFrotaFiltro
+): VeiculoFrota | null {
+  const frotaEscopo = filtrarFrotaPorEscopo(escopo);
+  return frotaEscopo.find((v) => v.plate === placa.trim().toUpperCase()) ?? null;
 }
 
-/**
- * Resumo síncrono da frota para o Assistente de IA (mock).
- * TODO(backend): virá de um endpoint de agregação.
- */
-export function obterResumoFrota() {
-  const porStatus = contagemStatusVazia();
-  const porGrupo: Record<string, number> = {};
-  FROTA.forEach((v) => {
+/** Resumo síncrono da frota nos 5 status oficiais (usado pelo Assistente de IA e KPIs) */
+export function obterResumoFrota(escopo?: EscopoFrotaFiltro): {
+  total: number;
+  porStatus: ContagemStatus;
+  porRegional: Record<string, number>;
+  emManutencao: VeiculoFrota[];
+  comAlerta: VeiculoFrota[];
+} {
+  const frotaEscopo = filtrarFrotaPorEscopo(escopo);
+  const porStatus = criarContagemStatusVazia();
+  const porRegional: Record<string, number> = {};
+
+  frotaEscopo.forEach((v) => {
     porStatus[v.status]++;
-    porGrupo[v.grupo] = (porGrupo[v.grupo] ?? 0) + 1;
+    porRegional[v.regional] = (porRegional[v.regional] ?? 0) + 1;
   });
+
   return {
-    total: FROTA.length,
+    total: frotaEscopo.length,
     porStatus,
-    porGrupo,
-    emManutencao: FROTA.filter((v) => v.status === "maintenance"),
-    comAlerta: FROTA.filter((v) => v.alerta !== null),
+    porRegional,
+    emManutencao: frotaEscopo.filter((v) => v.status === "maintenance"),
+    comAlerta: frotaEscopo.filter((v) => v.alerta !== null),
   };
 }

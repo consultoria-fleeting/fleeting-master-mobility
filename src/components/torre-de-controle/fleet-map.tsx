@@ -1,17 +1,17 @@
 /**
- * FleetMap — Mapa interativo da frota (Leaflet imperativo, sem react-leaflet).
+ * FleetMap — Mapa interativo da frota (Leaflet imperativo — Torre de Controle V1).
  *
- * Implementa `MAPA_REFERENCIA_VISUAL.md`:
- * - Modo Macro (zoom < 6): coroplético por região (GeoJSON das UFs do IBGE) +
- *   uma bolha pulsante por UF com a contagem de veículos.
- * - Modo Micro (zoom >= 6): clusters em grade (6–14) e pinos com seta de
- *   direção e placa (>= 15).
- * - Carregamento por viewport em `zoomend`/`moveend` (sem precisar clicar),
- *   com cache por UF na camada de dados.
- * - Drawer de detalhe, filtros, legenda, controles e modo expandido com lista.
+ * Regras V1 implementadas:
+ * - 5 status exclusivos cuja soma é igual ao total da frota exibido no bloco:
+ *   1. Em Rota · 2. Parado · 3. Em Oficina (precedência máxima) ·
+ *   4. Sem posição (há mais de 7 dias, marcador esmaecido) ·
+ *   5. Sem telemetria (cidade de alocação do cadastro, marcador distinto).
+ * - Clicar numa legenda (topo ou rodapé do mapa) filtra tanto o mapa quanto a
+ *   lista lateral, preservando a busca por placa, condutor ou modelo.
+ * - Respeita o escopo global de permissão/agrupamento e locadora do cabeçalho.
  *
  * IMPORTANTE (SSR): o Leaflet depende de `window`. Este componente DEVE ser
- * importado com `next/dynamic` e `{ ssr: false }` (ver `src/app/torre-de-controle/page.tsx`).
+ * importado com `next/dynamic` e `{ ssr: false }`.
  */
 
 "use client";
@@ -22,22 +22,33 @@ import "./mapa/fleet-map.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import type { Feature, FeatureCollection, Geometry } from "geojson";
-import { Crosshair, LoaderCircle, Maximize2, Minimize2, MousePointerClick } from "lucide-react";
+import {
+  Crosshair,
+  ListFilter,
+  LoaderCircle,
+  Maximize2,
+  Minimize2,
+  MousePointerClick,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type {
   ComandoFocoMapa,
   ContagemStatus,
+  EscopoFrotaFiltro,
   EstadoBrasil,
   FiltrosMapa,
   RegiaoBrasil,
+  StatusVeiculo,
   VeiculoFrota,
 } from "@/types/frota-mapa";
 import { clusterVehicles } from "./mapa/cluster";
 import {
   ATRIBUICAO_OSM,
+  criarContagemStatusVazia,
   ESCALA_REGIAO,
   LIMITES_BRASIL,
   LISTA_REGIOES,
+  LISTA_STATUS,
   TILE_CONFIGS,
   ZOOM_FOCO_VEICULO,
   ZOOM_MAX_CLIQUE_CLUSTER,
@@ -87,14 +98,8 @@ function filtrarVeiculos(veiculos: VeiculoFrota[], filtros: FiltrosMapa): Veicul
   });
 }
 
-/** Total do estado respeitando os filtros que existem no contrato macro (UF e status) */
-function totalFiltradoDoEstado(estado: EstadoBrasil, filtros: FiltrosMapa): number {
-  if (filtros.uf && estado.uf !== filtros.uf) return 0;
-  return filtros.status === "todos" ? estado.vehicleCount : estado.statusCounts[filtros.status];
-}
-
 function contarPorStatus(veiculos: VeiculoFrota[]): ContagemStatus {
-  const contagem: ContagemStatus = { in_transit: 0, parked: 0, depot: 0, maintenance: 0 };
+  const contagem = criarContagemStatusVazia();
   veiculos.forEach((v) => contagem[v.status]++);
   return contagem;
 }
@@ -106,9 +111,11 @@ function contarPorStatus(veiculos: VeiculoFrota[]): ContagemStatus {
 interface FleetMapProps {
   /** Comando externo para focar um veículo (ex.: Assistente de IA, tabela de atenção) */
   comandoFoco?: ComandoFocoMapa | null;
+  /** Escopo global vindo dos filtros de agrupamento/permissão e locadora do topo */
+  escopo?: EscopoFrotaFiltro;
 }
 
-export function FleetMap({ comandoFoco = null }: FleetMapProps) {
+export function FleetMap({ comandoFoco = null, escopo }: FleetMapProps) {
   /* ---------- Refs do Leaflet ---------- */
   const containerRef = useRef<HTMLDivElement>(null);
   const mapaRef = useRef<L.Map | null>(null);
@@ -126,6 +133,7 @@ export function FleetMap({ comandoFoco = null }: FleetMapProps) {
   const [zoom, setZoom] = useState(4);
   const [versaoViewport, setVersaoViewport] = useState(0);
   const [estados, setEstados] = useState<EstadoBrasil[]>([]);
+  const [veiculosEscopo, setVeiculosEscopo] = useState<VeiculoFrota[]>([]);
   const [veiculosPorUf, setVeiculosPorUf] = useState<Record<string, VeiculoFrota[]>>({});
   const [ufsCarregando, setUfsCarregando] = useState<string[]>([]);
   const [filtros, setFiltros] = useState<FiltrosMapa>(FILTROS_INICIAIS);
@@ -134,25 +142,50 @@ export function FleetMap({ comandoFoco = null }: FleetMapProps) {
   const [veiculoDestacadoId, setVeiculoDestacadoId] = useState<string | null>(null);
   const [mensagemFoco, setMensagemFoco] = useState<string | null>(null);
   const [expandido, setExpandido] = useState(false);
+  const [listaAbertaCompacto, setListaAbertaCompacto] = useState(false);
 
   const modoMacro = zoom < ZOOM_MICRO;
+  const chaveEscopo = `${escopo?.perfilDemo ?? "filiais"}|${escopo?.agrupamento ?? "todos"}|${escopo?.locadora ?? "todas"}`;
 
-  /* ---------- Dados derivados ---------- */
+  /* ---------- Dados derivados (100% consistentes entre Macro, Micro e Lista) ---------- */
 
-  const veiculosCarregados = useMemo(() => Object.values(veiculosPorUf).flat(), [veiculosPorUf]);
-
-  const veiculosFiltrados = useMemo(
-    () => filtrarVeiculos(veiculosCarregados, filtros),
-    [veiculosCarregados, filtros]
+  const veiculosCarregadosMicro = useMemo(
+    () => Object.values(veiculosPorUf).flat(),
+    [veiculosPorUf]
   );
 
-  /** Cor de cada região pelo ranking de quantidade de veículos (mais = mais escuro) */
+  /** Lista completa filtrada (usada na lista lateral, nos contadores e na visão Macro com busca/status) */
+  const listaFiltrada = useMemo(
+    () => filtrarVeiculos(veiculosEscopo, filtros),
+    [veiculosEscopo, filtros]
+  );
+
+  const pinosMicroFiltrados = useMemo(
+    () => filtrarVeiculos(veiculosCarregadosMicro, filtros),
+    [veiculosCarregadosMicro, filtros]
+  );
+
+  /** Contagem filtrada por UF na visão Macro (respeita status, categoria E busca por placa/condutor/modelo) */
+  const contagemFiltradaPorUf = useMemo(() => {
+    const mapaContagem: Record<string, number> = {};
+    listaFiltrada.forEach((v) => {
+      mapaContagem[v.state] = (mapaContagem[v.state] ?? 0) + 1;
+    });
+    return mapaContagem;
+  }, [listaFiltrada]);
+
+  /** Cor de cada região pelo ranking de quantidade de veículos do escopo */
   const regioes = useMemo(() => {
     const totais = LISTA_REGIOES.map((regiao) => ({
       regiao,
-      total: estados.filter((e) => e.regiao === regiao).reduce((soma, e) => soma + e.vehicleCount, 0),
+      total: estados
+        .filter((e) => e.regiao === regiao)
+        .reduce((soma, e) => soma + e.vehicleCount, 0),
     })).sort((a, b) => b.total - a.total);
-    return totais.map((item, i) => ({ ...item, cor: ESCALA_REGIAO[Math.min(i, ESCALA_REGIAO.length - 1)] }));
+    return totais.map((item, i) => ({
+      ...item,
+      cor: ESCALA_REGIAO[Math.min(i, ESCALA_REGIAO.length - 1)],
+    }));
   }, [estados]);
 
   const corPorRegiao = useMemo(
@@ -160,28 +193,19 @@ export function FleetMap({ comandoFoco = null }: FleetMapProps) {
     [regioes]
   );
 
-  const totalFrota = useMemo(() => estados.reduce((soma, e) => soma + e.vehicleCount, 0), [estados]);
+  const totalFrota = veiculosEscopo.length;
 
-  /** Contagem dos chips de status (ignora o próprio filtro de status) */
+  /**
+   * Contagem exibida nas 5 legendas de status:
+   * Sem busca/UF/categoria ativa, a soma dos 5 contadores é exatamente igual ao `totalFrota`.
+   * Quando há busca por placa/condutor/modelo ou filtro de UF, reflete o recorte buscado.
+   */
   const contagemStatus = useMemo<ContagemStatus>(() => {
-    if (modoMacro) {
-      const contagem: ContagemStatus = { in_transit: 0, parked: 0, depot: 0, maintenance: 0 };
-      estados
-        .filter((e) => !filtros.uf || e.uf === filtros.uf)
-        .forEach((e) => {
-          contagem.in_transit += e.statusCounts.in_transit;
-          contagem.parked += e.statusCounts.parked;
-          contagem.depot += e.statusCounts.depot;
-          contagem.maintenance += e.statusCounts.maintenance;
-        });
-      return contagem;
-    }
-    return contarPorStatus(filtrarVeiculos(veiculosCarregados, { ...filtros, status: "todos" }));
-  }, [modoMacro, estados, veiculosCarregados, filtros]);
+    const baseSemStatus = filtrarVeiculos(veiculosEscopo, { ...filtros, status: "todos" });
+    return contarPorStatus(baseSemStatus);
+  }, [veiculosEscopo, filtros]);
 
-  const visiveis = modoMacro
-    ? estados.reduce((soma, e) => soma + totalFiltradoDoEstado(e, filtros), 0)
-    : veiculosFiltrados.length;
+  const visiveis = listaFiltrada.length;
 
   /* ---------- Ações de navegação ---------- */
 
@@ -202,6 +226,13 @@ export function FleetMap({ comandoFoco = null }: FleetMapProps) {
     const estado = estados.find((e) => e.uf === uf);
     if (estado) mapaRef.current?.flyToBounds(estado.bounds, { padding: [24, 24], duration: 0.9 });
     else voltarBrasil();
+  }
+
+  function alternarStatusLegenda(status: StatusVeiculo) {
+    setFiltros((atual) => ({
+      ...atual,
+      status: atual.status === status ? "todos" : status,
+    }));
   }
 
   /* ========================================================= */
@@ -225,17 +256,11 @@ export function FleetMap({ comandoFoco = null }: FleetMapProps) {
     setZoom(mapa.getZoom());
     setMapaPronto(true);
 
-    // Container muda de tamanho (sidebar recolhe, modo expandido) → recalcula o mapa
     const observador = new ResizeObserver(() => mapa.invalidateSize());
     observador.observe(container);
 
     let cancelado = false;
 
-    fetchMacro().then(({ estados: lista }) => {
-      if (!cancelado) setEstados(lista);
-    });
-
-    // GeoJSON das UFs carregado sob demanda (fica no chunk do mapa, não no bundle principal)
     import("./mapa/brasil-ufs.geo.json").then((modulo) => {
       if (cancelado) return;
       const dados = modulo.default as unknown as FeatureCollection<Geometry, PropriedadesUf>;
@@ -270,6 +295,27 @@ export function FleetMap({ comandoFoco = null }: FleetMapProps) {
       camadaMicroRef.current = null;
     };
   }, []);
+
+  /* ========================================================= */
+  /*  EFEITO 1B — Recarrega dados Macro quando o escopo muda   */
+  /* ========================================================= */
+  useEffect(() => {
+    let cancelado = false;
+    ufsCarregandoRef.current.clear();
+
+    fetchMacro(escopo).then(({ estados: listaEstados, veiculosEscopo: frotaFiltrada }) => {
+      if (cancelado) return;
+      setVeiculosPorUf({});
+      setUfsCarregando([]);
+      setEstados(listaEstados);
+      setVeiculosEscopo(frotaFiltrada);
+    });
+
+    return () => {
+      cancelado = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chaveEscopo]);
 
   /* ========================================================= */
   /*  EFEITO 2 — Camada base (tiles)                           */
@@ -325,7 +371,7 @@ export function FleetMap({ comandoFoco = null }: FleetMapProps) {
     pendentes.forEach((uf) => ufsCarregandoRef.current.add(uf));
     setUfsCarregando((atual) => [...atual, ...pendentes]);
 
-    fetchVehiclesByMultipleStates(pendentes)
+    fetchVehiclesByMultipleStates(pendentes, escopo)
       .then((veiculos) => {
         setVeiculosPorUf((atual) => {
           const proximo = { ...atual };
@@ -339,7 +385,8 @@ export function FleetMap({ comandoFoco = null }: FleetMapProps) {
         pendentes.forEach((uf) => ufsCarregandoRef.current.delete(uf));
         setUfsCarregando((atual) => atual.filter((uf) => !pendentes.includes(uf)));
       });
-  }, [zoom, versaoViewport, estados, veiculosPorUf, mapaPronto]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zoom, versaoViewport, estados, veiculosPorUf, mapaPronto, chaveEscopo]);
 
   /* ========================================================= */
   /*  EFEITO 5 — Desenho dos marcadores                        */
@@ -357,7 +404,7 @@ export function FleetMap({ comandoFoco = null }: FleetMapProps) {
 
     if (modoMacro) {
       estados.forEach((estado) => {
-        const total = totalFiltradoDoEstado(estado, filtros);
+        const total = contagemFiltradaPorUf[estado.uf] ?? 0;
         if (total === 0) return;
         L.marker([estado.lat, estado.lng], { icon: criarIconeEstado(estado, total), riseOnHover: true })
           .bindTooltip(criarTooltipEstado(estado, total), { className: "fm-tooltip", direction: "top", offset: [0, -26] })
@@ -367,7 +414,7 @@ export function FleetMap({ comandoFoco = null }: FleetMapProps) {
       return;
     }
 
-    clusterVehicles(veiculosFiltrados, zoom).forEach((item) => {
+    clusterVehicles(pinosMicroFiltrados, zoom).forEach((item) => {
       if (item.isCluster) {
         L.marker([item.lat, item.lng], { icon: criarIconeCluster(item), riseOnHover: true })
           .bindTooltip(criarTooltipCluster(item), { className: "fm-tooltip", direction: "top", offset: [0, -22] })
@@ -396,7 +443,7 @@ export function FleetMap({ comandoFoco = null }: FleetMapProps) {
         })
         .addTo(camadaMicro);
     });
-  }, [modoMacro, zoom, estados, filtros, veiculosFiltrados, idSelecionado, mapaPronto]);
+  }, [modoMacro, zoom, estados, contagemFiltradaPorUf, pinosMicroFiltrados, idSelecionado, mapaPronto]);
 
   /* ========================================================= */
   /*  EFEITO 6 — Comando externo de foco (IA / tabelas)        */
@@ -406,9 +453,13 @@ export function FleetMap({ comandoFoco = null }: FleetMapProps) {
     ultimoTokenFocoRef.current = comandoFoco.token;
 
     let cancelado = false;
-    fetchVehicleByPlate(comandoFoco.placa).then((veiculo) => {
-      if (cancelado || !veiculo || !mapaRef.current) return;
-      setFiltros(FILTROS_INICIAIS); // garante que o veículo não fique escondido por filtros
+    fetchVehicleByPlate(comandoFoco.placa, escopo).then((veiculo) => {
+      if (cancelado || !mapaRef.current) return;
+      if (!veiculo) {
+        setMensagemFoco(`Placa ${comandoFoco.placa} fora do escopo filtrado`);
+        return;
+      }
+      setFiltros(FILTROS_INICIAIS);
       setMensagemFoco(`${veiculo.plate} · ${veiculo.model} em foco`);
       const mapa = mapaRef.current;
       setVeiculoDestacadoId(veiculo.id);
@@ -417,16 +468,14 @@ export function FleetMap({ comandoFoco = null }: FleetMapProps) {
     return () => {
       cancelado = true;
     };
-  }, [comandoFoco, mapaPronto]);
+  }, [comandoFoco, mapaPronto, escopo]);
 
-  // Esconde a mensagem de foco após alguns segundos
   useEffect(() => {
     if (!mensagemFoco) return;
     const timer = setTimeout(() => setMensagemFoco(null), 3200);
     return () => clearTimeout(timer);
   }, [mensagemFoco]);
 
-  // Esc fecha o modo expandido (quando o drawer não está aberto)
   useEffect(() => {
     if (!expandido) return;
     function aoPressionarTecla(evento: KeyboardEvent) {
@@ -440,11 +489,13 @@ export function FleetMap({ comandoFoco = null }: FleetMapProps) {
   /*  RENDER                                                   */
   /* ========================================================= */
 
+  const somaContadores = LISTA_STATUS.reduce((soma, s) => soma + contagemStatus[s], 0);
   const textoToast =
     ufsCarregando.length > 0 ? `Carregando veículos · ${ufsCarregando.join(", ")}` : mensagemFoco;
+  const mostrarLista = expandido || listaAbertaCompacto;
 
   return (
-    <div className="relative h-full min-h-[420px]">
+    <div className="relative h-full min-h-[360px]">
       {expandido && (
         <div
           className="fixed inset-0 z-40 bg-[#1E1B4B]/45 backdrop-blur-sm animate-fade-in"
@@ -465,22 +516,38 @@ export function FleetMap({ comandoFoco = null }: FleetMapProps) {
         <header className="flex items-center gap-2 px-4 pb-2 pt-3.5">
           <h2 className="text-[13px] font-semibold text-[#1E1B4B]">Distribuição da Frota</h2>
           <span
-            className={cn(
-              "rounded-full px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.06em] transition-colors",
-              modoMacro ? "bg-[#EEF2FF] text-[#4F46E5]" : "bg-[#10b981]/10 text-[#059669]"
-            )}
-            title={`Nível de zoom: ${zoom}`}
+            className="shrink-0 rounded-full bg-[#EEF2FF] px-2.5 py-0.5 text-[10.5px] font-semibold tabular-nums text-[#4F46E5]"
+            title={`Soma dos 5 status = ${somaContadores} veículos no escopo`}
           >
-            {modoMacro ? "Macro · Estados" : "Micro · Veículos"}
+            {visiveis} / {totalFrota} veículos
           </span>
           <div className="flex-1" />
+
+          {!expandido && (
+            <button
+              type="button"
+              onClick={() => setListaAbertaCompacto((atual) => !atual)}
+              aria-pressed={listaAbertaCompacto}
+              className={cn(
+                "hidden items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition-colors md:inline-flex",
+                listaAbertaCompacto
+                  ? "border-[#C7D2FE] bg-[#EEF2FF] text-[#4F46E5]"
+                  : "border-[#E7E7F0] bg-white text-[#64748B] hover:border-[#C7D2FE] hover:text-[#4F46E5]"
+              )}
+              title="Exibir ou ocultar a lista lateral sincronizada com os filtros do mapa"
+            >
+              <ListFilter className="h-3.5 w-3.5" />
+              Lista ({visiveis})
+            </button>
+          )}
+
           <button
             id="mapa-btn-expandir"
             type="button"
             onClick={() => setExpandido((atual) => !atual)}
             className="flex h-7 w-7 items-center justify-center rounded-lg text-[#64748B] transition-colors hover:bg-[#EEF2FF] hover:text-[#4F46E5]"
             aria-label={expandido ? "Recolher mapa" : "Expandir mapa"}
-            title={expandido ? "Recolher (Esc)" : "Expandir mapa"}
+            title={expandido ? "Recolher (Esc)" : "Expandir mapa com lista completa"}
           >
             {expandido ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </button>
@@ -493,8 +560,6 @@ export function FleetMap({ comandoFoco = null }: FleetMapProps) {
             onUfChange={alterarUf}
             estados={estados}
             contagemStatus={contagemStatus}
-            visiveis={visiveis}
-            total={totalFrota}
             expandido={expandido}
           />
         </div>
@@ -512,12 +577,18 @@ export function FleetMap({ comandoFoco = null }: FleetMapProps) {
               onZoomOut={() => mapaRef.current?.zoomOut()}
             />
 
-            <MapLegend modoMacro={modoMacro} regioes={regioes} contagemStatus={contagemStatus} />
+            <MapLegend
+              modoMacro={modoMacro}
+              regioes={regioes}
+              contagemStatus={contagemStatus}
+              statusAtivo={filtros.status}
+              onAlternarStatus={alternarStatusLegenda}
+            />
 
             {modoMacro && (
               <div className="pointer-events-none absolute left-2 top-2 z-[500] inline-flex max-w-[calc(100%-4rem)] items-center gap-1.5 rounded-full bg-[#1E1B4B]/90 px-2.5 py-1 text-[10px] font-medium text-[#E0E7FF] shadow-md">
                 <MousePointerClick className="h-3 w-3 shrink-0 text-[#A5B4FC]" />
-                <span className="truncate">Clique em um estado ou aproxime o zoom para ver os veículos</span>
+                <span className="truncate">Clique em um estado ou aproxime o zoom para ver os pinos</span>
               </div>
             )}
 
@@ -536,12 +607,12 @@ export function FleetMap({ comandoFoco = null }: FleetMapProps) {
             )}
           </div>
 
-          {expandido && (
+          {mostrarLista && (
             <FleetListSidebar
-              veiculos={veiculosFiltrados}
+              veiculos={listaFiltrada}
               selecionadoId={idSelecionado}
               onSelecionar={(veiculo) => focarVeiculo(veiculo, true)}
-              modoMacro={modoMacro}
+              compacta={!expandido}
             />
           )}
         </div>

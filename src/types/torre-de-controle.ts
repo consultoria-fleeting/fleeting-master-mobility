@@ -1,9 +1,30 @@
 /**
- * Tipos da Torre de Controle (visão consolidada da frota).
+ * Tipos da Torre de Controle V1 (visão consolidada da frota).
  *
  * Os dados hoje vêm de mocks (`src/components/torre-de-controle/mock-data.ts`).
  * Quando o backend for integrado, as respostas da API devem seguir estes contratos.
  */
+
+import type { NivelAgrupamento } from "./frota-mapa";
+
+export type { NivelAgrupamento };
+
+/** Estado dos filtros globais do cabeçalho da Torre de Controle */
+export interface FiltrosTorre {
+  /** Mês fechado de 1 ("1") a 12 ("12") */
+  mes: string;
+  /** Ano com 4 dígitos (ex.: "2026") */
+  ano: string;
+  /** Valor selecionado no filtro de agrupamento hierárquico ("todos" = escopo completo do perfil) */
+  agrupamento: string;
+  /** Locadora selecionada ou "todas" */
+  locadora: string;
+  /**
+   * Simulador de perfil/nível hierárquico exclusivo do protótipo de validação.
+   * TODO(security): em produção, o nível e a lista de opções vêm exclusivamente do JWT no backend.
+   */
+  perfilDemo: NivelAgrupamento;
+}
 
 /** Item de detalhamento exibido no drawer de um KPI */
 export interface DetalheKpi {
@@ -18,7 +39,7 @@ export interface KpiTorre {
   valor: string;
   /** Texto complementar ao lado do valor (ex.: "988 L") */
   sub?: string;
-  /** Variação vs. período anterior (ex.: "▲ 3%", "—") */
+  /** Variação vs. mês fechado anterior (ex.: "▲ 3%", "—") */
   delta: string;
   /** true = variação boa (verde), false = ruim (vermelho), null = neutra (cinza) */
   bom: boolean | null;
@@ -26,6 +47,8 @@ export interface KpiTorre {
   tip: string;
   /** Legenda curta abaixo do valor */
   legenda: string;
+  /** Observação metodológica opcional no rodapé do drawer (ex.: fórmula de km/l) */
+  notaMetodologia?: string;
   /** Linhas exibidas no drawer de detalhamento */
   detalhes: DetalheKpi[];
 }
@@ -62,15 +85,23 @@ export interface AtividadeRecente {
   titulo: string;
   meta: string;
   cor: string;
+  /** Placa associada opcional (usada para filtrar por escopo no protótipo) */
+  placa?: string;
 }
 
-export type TomManutencao = "perigo" | "alerta" | "neutro";
+export type TomQuadroResumo = "perigo" | "alerta" | "indigo" | "neutro";
 
-/** Tile do card "Manutenção da Frota" */
-export interface ItemManutencao {
+/** Tile clicável dos quadros 2×2 (Manutenções, Sinistros e Multas & CNH) */
+export interface ItemQuadroResumo {
+  id: string;
   label: string;
-  quantidade: number;
-  tom: TomManutencao;
+  /** Valor formatado (ex.: "14" ou "R$ 4,2 mil") */
+  valor: string;
+  /** Subtítulo curto para indicar semântica temporal (ex.: "no mês" ou "posição atual") */
+  detalhe?: string;
+  tom: TomQuadroResumo;
+  /** Rota de destino no módulo correspondente do Master Mobility */
+  caminhoLegado: string;
 }
 
 /** Identificador de cada categoria de custo que compõe o TCO */
@@ -83,7 +114,7 @@ export interface CategoriaTco {
   cor: string;
 }
 
-/** Custos da frota em um mês (base do drawer "TCO do Mês") */
+/** Custos da frota em um mês fechado (base do drawer "TCO do Mês") */
 export interface MesTco {
   /** Chave única do mês no formato "AAAA-MM" (ex.: "2026-10") */
   chave: string;
@@ -99,9 +130,13 @@ export interface MesTco {
   custos: Record<CategoriaTcoId, number>;
 }
 
-/** Barra do gráfico "KMs Rodados" */
+/** Barra do gráfico "KM rodado nos últimos 12 meses" */
 export interface BarraKm {
+  /** Chave única "AAAA-MM" */
+  chave: string;
+  /** Rótulo curto exibido no eixo X (ex.: "Nov", "Dez", "Jan") */
   mes: string;
+  /** Rótulo completo exibido no tooltip (ex.: "Outubro/2026") */
   mesCompleto: string;
   km: number;
   destaque: boolean;
@@ -111,4 +146,6 @@ export interface BarraKm {
 export interface OpcaoFiltro {
   valor: string;
   label: string;
+  /** Desabilita meses futuros/ainda não fechados */
+  desabilitado?: boolean;
 }

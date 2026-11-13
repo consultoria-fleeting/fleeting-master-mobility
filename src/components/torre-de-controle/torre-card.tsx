@@ -2,14 +2,8 @@
  * TorreCard — Card base da Torre de Controle (identidade Índigo).
  *
  * Cabeçalho com indicador colorido opcional, título, contador e ação
- * ("Ver Todos" ou conteúdo à direita). O corpo ocupa o restante da altura,
- * permitindo listas com scroll interno.
- *
- * @example
- * <TorreCard titulo="Veículos que Exigem Atenção" contador={7} corIndicador="#E11D48" acao="Ver Todos">
- *   ...
- * </TorreCard>
- * Com `rolavel`, o corpo usa o AreaRolagemSuave (barra discreta + degradê).
+ * (botão, link `hrefAcao` ou `extraCabecalho`). O corpo ocupa o restante da altura,
+ * permitindo listas com scroll interno (`rolavel`).
  */
 
 import { AreaRolagemSuave } from "@/components/area-rolagem-suave";
@@ -21,8 +15,10 @@ interface TorreCardProps {
   corIndicador?: string;
   /** Número exibido em badge ao lado do título */
   contador?: number;
-  /** Texto do link de ação (ex.: "Ver Todos") */
+  /** Texto do link/botão de ação (ex.: "Ver Todos" ou "Abrir módulo") */
   acao?: string;
+  /** Destino externo/legado opcional para a ação do cabeçalho */
+  hrefAcao?: string;
   onAcao?: () => void;
   /** Conteúdo livre à direita do cabeçalho (substitui `acao`) */
   extraCabecalho?: React.ReactNode;
@@ -38,6 +34,7 @@ export function TorreCard({
   corIndicador,
   contador,
   acao,
+  hrefAcao,
   onAcao,
   extraCabecalho,
   className,
@@ -59,7 +56,7 @@ export function TorreCard({
         <h2 className="truncate text-[13px] font-semibold text-[#1E1B4B]">{titulo}</h2>
         {contador !== undefined && (
           <span
-            className="rounded-full px-1.5 py-px text-[10px] font-bold"
+            className="rounded-full px-1.5 py-px text-[10px] font-bold tabular-nums"
             style={{
               background: corIndicador ? `${corIndicador}1A` : "#EEF2FF",
               color: corIndicador ?? "#4F46E5",
@@ -70,15 +67,23 @@ export function TorreCard({
         )}
         <div className="flex-1" />
         {extraCabecalho ??
-          (acao && (
-            <button
-              type="button"
-              onClick={onAcao}
-              className="shrink-0 text-[11.5px] font-semibold text-[#4F46E5] transition-colors hover:text-[#4338CA] hover:underline"
-            >
-              {acao}
-            </button>
-          ))}
+          (acao &&
+            (hrefAcao ? (
+              <a
+                href={hrefAcao}
+                className="shrink-0 text-[11.5px] font-semibold text-[#4F46E5] transition-colors hover:text-[#4338CA] hover:underline"
+              >
+                {acao}
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={onAcao}
+                className="shrink-0 text-[11.5px] font-semibold text-[#4F46E5] transition-colors hover:text-[#4338CA] hover:underline"
+              >
+                {acao}
+              </button>
+            )))}
       </header>
       {rolavel ? (
         <AreaRolagemSuave conteudoClassName={corpoClassName}>{children}</AreaRolagemSuave>

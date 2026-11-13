@@ -18,17 +18,29 @@ import { cn } from "@/lib/utils";
 interface DeltaBadgeProps {
   delta: string;
   bom: boolean | null;
+  /** `"escuro"` ajusta o contraste para cabeçalhos em Índigo profundo (`#1E1B4B`) */
+  variante?: "claro" | "escuro";
   className?: string;
 }
 
-export function DeltaBadge({ delta, bom, className }: DeltaBadgeProps) {
+export function DeltaBadge({
+  delta,
+  bom,
+  variante = "claro",
+  className,
+}: DeltaBadgeProps) {
+  const escuro = variante === "escuro";
+
   return (
     <span
       className={cn(
-        "whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
-        bom === null && "bg-[#F1F5F9] text-[#64748B]",
-        bom === true && "bg-[#059669]/10 text-[#059669]",
-        bom === false && "bg-[#E11D48]/10 text-[#E11D48]",
+        "inline-flex items-center justify-center whitespace-nowrap rounded-md px-1.5 py-1 text-[10px] font-bold leading-none tabular-nums",
+        !escuro && bom === null && "bg-[#F1F5F9] text-[#64748B]",
+        !escuro && bom === true && "bg-[#059669]/10 text-[#059669]",
+        !escuro && bom === false && "bg-[#E11D48]/10 text-[#E11D48]",
+        escuro && bom === null && "bg-white/12 text-[#CBD5E1]",
+        escuro && bom === true && "bg-[#34D399]/20 text-[#6EE7B7]",
+        escuro && bom === false && "bg-[#FB7185]/20 text-[#FDA4AF]",
         className
       )}
     >

@@ -1,12 +1,13 @@
 /**
- * Configurações centrais do Mapa de Frota.
+ * Configurações centrais do Mapa de Frota — Torre de Controle V1.
  *
- * Tudo que pode mudar entre ambientes (URL de tiles, limites de zoom, cores)
- * fica isolado aqui, conforme `MAPA_REFERENCIA_VISUAL.md` (seções 1, 2, 6 e 8).
+ * Tudo que pode mudar entre ambientes (URL de tiles, limites de zoom, cores e
+ * regras oficiais de status) fica isolado aqui.
  */
 
 import type {
   CategoriaVeiculo,
+  ContagemStatus,
   LimitesGeo,
   RegiaoBrasil,
   StatusVeiculo,
@@ -49,16 +50,75 @@ export const LIMITES_BRASIL: LimitesGeo = [
   [5.3, -34.8],
 ];
 
-/* ---------- Status e categorias ---------- */
+/* ---------- Status oficiais da Torre de Controle V1 (ordem obrigatória 1 a 5) ---------- */
 
-export const STATUS_CONFIG: Record<StatusVeiculo, { label: string; cor: string }> = {
-  in_transit: { label: "Em rota", cor: "#10b981" },
-  parked: { label: "Estacionado", cor: "#3b82f6" },
-  depot: { label: "Pátio", cor: "#8b5cf6" },
-  maintenance: { label: "Manutenção", cor: "#f59e0b" },
+export interface ConfigStatusVeiculo {
+  label: string;
+  /** Rótulo compacto usado em espaços estreitos (ex.: lista lateral) */
+  labelCurto: string;
+  cor: string;
+  origemPadrao: string;
+  regra: string;
+}
+
+export const STATUS_CONFIG: Record<StatusVeiculo, ConfigStatusVeiculo> = {
+  in_transit: {
+    label: "Em Rota",
+    labelCurto: "Em Rota",
+    cor: "#10b981",
+    origemPadrao: "Telemetria",
+    regra: "Última posição recebida nas últimas 5 horas e com velocidade diferente de zero.",
+  },
+  stopped: {
+    label: "Parado",
+    labelCurto: "Parado",
+    cor: "#3b82f6",
+    origemPadrao: "Telemetria",
+    regra: "Última posição recebida há até 7 dias, com velocidade igual a zero ou recebida há mais de 5 horas.",
+  },
+  maintenance: {
+    label: "Em Oficina",
+    labelCurto: "Em Oficina",
+    cor: "#f59e0b",
+    origemPadrao: "Módulo de Manutenção",
+    regra: "Ordem de serviço em aberto no módulo de Manutenção (prevalece sobre os demais status).",
+  },
+  no_position: {
+    label: "Sem posição (há mais de 7 dias)",
+    labelCurto: "Sem posição (>7d)",
+    cor: "#64748b",
+    origemPadrao: "Telemetria",
+    regra: "Veículo com telemetria sem nenhuma posição recebida nos últimos 7 dias (última posição conhecida).",
+  },
+  no_telemetry: {
+    label: "Sem telemetria",
+    labelCurto: "Sem telemetria",
+    cor: "#7c3aed",
+    origemPadrao: "Cadastro do veículo",
+    regra: "Veículo sem telemetria. Posicionado pela cidade de alocação do cadastro.",
+  },
 };
 
-export const LISTA_STATUS = Object.keys(STATUS_CONFIG) as StatusVeiculo[];
+export const LISTA_STATUS: StatusVeiculo[] = [
+  "in_transit",
+  "stopped",
+  "maintenance",
+  "no_position",
+  "no_telemetry",
+];
+
+/** Cria um objeto zerado com os 5 status oficiais (evita duplicação entre módulos) */
+export function criarContagemStatusVazia(): ContagemStatus {
+  return {
+    in_transit: 0,
+    stopped: 0,
+    maintenance: 0,
+    no_position: 0,
+    no_telemetry: 0,
+  };
+}
+
+/* ---------- Categorias ---------- */
 
 export const CATEGORIA_CONFIG: Record<CategoriaVeiculo, { label: string }> = {
   car: { label: "Carro" },

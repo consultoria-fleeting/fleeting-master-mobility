@@ -35,7 +35,7 @@ export function TcoDetalhe({ historico, categorias }: TcoDetalheProps) {
   );
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       <TcoEvolucao
         historico={historico}
         categorias={categorias}

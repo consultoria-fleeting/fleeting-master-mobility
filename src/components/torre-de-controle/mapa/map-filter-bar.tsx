@@ -1,11 +1,12 @@
 /**
- * MapFilterBar — Barra de filtros do mapa.
+ * MapFilterBar — Barra de filtros e legendas clicáveis do mapa (V1).
  *
- * Busca (placa / condutor / modelo), select de UF, chips de status e de
- * categoria e contador "N / total". No modo compacto (card da Torre de Controle) mostra
- * apenas busca + chips de status; no modo expandido mostra tudo.
+ * Exibe busca (placa / condutor / modelo), contador "visíveis / total da frota"
+ * e as 5 legendas de status na ordem oficial:
+ *   Em Rota · Parado · Em Oficina · Sem posição (há mais de 7 dias) · Sem telemetria.
  *
- * Entradas validadas com Zod antes de atualizar o estado.
+ * Clicar numa legenda filtra o mapa e a lista para aquele status, mantendo a busca.
+ * Todas as entradas são validadas com Zod antes de atualizar o estado.
  */
 
 "use client";
@@ -37,8 +38,6 @@ interface MapFilterBarProps {
   onUfChange: (uf: string) => void;
   estados: EstadoBrasil[];
   contagemStatus: ContagemStatus;
-  visiveis: number;
-  total: number;
   expandido: boolean;
 }
 
@@ -48,8 +47,6 @@ export function MapFilterBar({
   onUfChange,
   estados,
   contagemStatus,
-  visiveis,
-  total,
   expandido,
 }: MapFilterBarProps) {
   function alterarBusca(valor: string) {
@@ -80,7 +77,7 @@ export function MapFilterBar({
             type="search"
             value={filtros.busca}
             onChange={(e) => alterarBusca(e.target.value)}
-            placeholder="Placa, condutor ou modelo…"
+            placeholder="Buscar por placa, condutor ou modelo…"
             aria-label="Buscar veículo por placa, condutor ou modelo"
             maxLength={40}
             className="h-8 w-full rounded-[9px] border border-[#E7E7F0] bg-[#F8F8FC] pl-8 pr-7 text-[11.5px] text-[#1E1B4B] placeholder:text-[#94A3B8] focus:border-[#C7D2FE] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/20"
@@ -113,39 +110,40 @@ export function MapFilterBar({
             ))}
           </select>
         )}
-
-        <span
-          className="shrink-0 rounded-full bg-[#EEF2FF] px-2.5 py-1 text-[10.5px] font-semibold tabular-nums text-[#4F46E5]"
-          title="Veículos visíveis / total da frota"
-        >
-          {visiveis} / {total}
-        </span>
       </div>
 
-      {/* Chips */}
+      {/* Legendas clicáveis dos 5 status oficiais (na ordem fechada pelo Produto) */}
       <div className="flex flex-wrap items-center gap-1.5">
         {LISTA_STATUS.map((status) => {
           const ativo = filtros.status === status;
+          const config = STATUS_CONFIG[status];
+          const ehCadastro = status === "no_telemetry";
+          const ehSemPosicao = status === "no_position";
           return (
             <button
               key={status}
               type="button"
               onClick={() => alterarStatus(status)}
               aria-pressed={ativo}
+              title={`${config.regra} (Origem: ${config.origemPadrao})`}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10.5px] font-medium transition-all",
                 ativo
                   ? "border-transparent text-white shadow-sm"
                   : "border-[#E7E7F0] bg-white text-[#334155] hover:border-[#C7D2FE]"
               )}
-              style={ativo ? { background: STATUS_CONFIG[status].cor } : undefined}
+              style={ativo ? { background: config.cor } : undefined}
             >
               <span
-                className="h-2 w-2 rounded-full"
-                style={{ background: ativo ? "#fff" : STATUS_CONFIG[status].cor }}
+                className={cn(
+                  "h-2 w-2 shrink-0",
+                  ehCadastro ? "rotate-45 rounded-[2px]" : "rounded-full",
+                  ehSemPosicao && !ativo && "opacity-55"
+                )}
+                style={{ background: ativo ? "#fff" : config.cor }}
               />
-              {STATUS_CONFIG[status].label}
-              <span className={cn("tabular-nums", ativo ? "text-white/80" : "text-[#94A3B8]")}>
+              {config.label}
+              <span className={cn("font-semibold tabular-nums", ativo ? "text-white/90" : "text-[#64748B]")}>
                 {contagemStatus[status]}
               </span>
             </button>

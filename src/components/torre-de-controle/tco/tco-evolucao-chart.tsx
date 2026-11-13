@@ -115,8 +115,8 @@ export function TcoEvolucaoChart({
           <YAxis
             axisLine={false}
             tickLine={false}
-            width={44}
-            tick={{ fontSize: 10, fill: COR_EIXO }}
+            width={48}
+            tick={{ fontSize: 11, fill: COR_EIXO }}
             tickFormatter={formatarEixoMil}
             domain={visao === "tendencia" ? [arredondarParaBaixo, "auto"] : [0, "auto"]}
           />
@@ -273,16 +273,16 @@ function TickMes({
   return (
     <g transform={`translate(${x},${y})`}>
       <text
-        dy={12}
+        dy={13}
         textAnchor="middle"
-        fontSize={10.5}
+        fontSize={11.5}
         fontWeight={selecionado ? 700 : 500}
         fill={selecionado ? COR_DESTAQUE : COR_EIXO}
       >
         {mes.mes}
       </text>
       {mostrarAno && (
-        <text dy={25} textAnchor="middle" fontSize={9} fill="#CBD5E1">
+        <text dy={27} textAnchor="middle" fontSize={10} fill="#94A3B8">
           {mes.ano}
         </text>
       )}

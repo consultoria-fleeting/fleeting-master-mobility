@@ -69,20 +69,22 @@ export function TcoEvolucao({ historico, categorias, chaveSelecionada, onSelecio
   }
 
   return (
-    <section className="rounded-2xl border border-[#E7E7F0] bg-white p-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
+    <section className="rounded-2xl border border-[#E7E7F0] bg-white p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-[13.5px] font-semibold text-[#1E1B4B]">Evolução do TCO</h3>
-          <p className="text-[11px] text-[#94A3B8]">Custo da frota mês a mês · clique em um mês para ver a composição</p>
+          <h3 className="text-[15px] font-semibold text-[#1E1B4B]">Evolução do TCO</h3>
+          <p className="mt-0.5 text-[12px] text-[#64748B]">
+            Custo da frota mês a mês · clique em um mês para ver a composição
+          </p>
         </div>
         <SegmentedControl rotulo="Período do gráfico" opcoes={OPCOES_PERIODO} valor={periodo} onChange={alterarPeriodo} />
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <SegmentedControl rotulo="Tipo de visualização" opcoes={OPCOES_VISAO} valor={visao} onChange={setVisao} />
 
         {/* Chips de categoria (funcionam como legenda e filtro) */}
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Categorias de custo">
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Categorias de custo">
           {categorias.map((categoria) => {
             const ativa = idsAtivos.includes(categoria.id);
             return (
@@ -92,14 +94,14 @@ export function TcoEvolucao({ historico, categorias, chaveSelecionada, onSelecio
                 aria-pressed={ativa}
                 onClick={() => alternarCategoria(categoria.id)}
                 className={cn(
-                  "inline-flex h-6 items-center gap-1.5 rounded-full border px-2 text-[10.5px] font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5]",
+                  "inline-flex h-7 items-center gap-1.5 rounded-full border px-3 text-[11.5px] font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5]",
                   ativa
-                    ? "border-[#E0E7FF] bg-[#EEF2FF]/70 text-[#1E1B4B]"
+                    ? "border-[#C7D2FE] bg-[#EEF2FF]/80 text-[#1E1B4B]"
                     : "border-dashed border-[#E2E8F0] bg-white text-[#94A3B8] line-through decoration-[#CBD5E1]"
                 )}
               >
                 <span
-                  className="h-2 w-2 rounded-[3px] transition-opacity"
+                  className="h-2.5 w-2.5 rounded-[3px] transition-opacity"
                   style={{ background: categoria.cor, opacity: ativa ? 1 : 0.3 }}
                 />
                 {categoria.label}
@@ -109,9 +111,9 @@ export function TcoEvolucao({ historico, categorias, chaveSelecionada, onSelecio
         </div>
       </div>
 
-      <div className="mt-3">
+      <div className="mt-4">
         {/* Legenda da linha de média (fora do gráfico para não sobrepor as barras) */}
-        <p className="mb-1 flex items-center justify-end gap-1.5 text-[10.5px] text-[#94A3B8]">
+        <p className="mb-1.5 flex items-center justify-end gap-1.5 text-[11.5px] text-[#64748B]">
           <span className="w-4 border-t-2 border-dashed border-[#D4AB00]" aria-hidden />
           Média do período <strong className="font-semibold text-[#B45309]">{formatarMoedaCompacta(media)}</strong>
         </p>
@@ -123,17 +125,18 @@ export function TcoEvolucao({ historico, categorias, chaveSelecionada, onSelecio
           media={media}
           chaveSelecionada={chaveSelecionada}
           onSelecionarMes={onSelecionarMes}
+          altura={265}
         />
       </div>
 
       {/* Resumo do período */}
-      <dl className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <ResumoItem rotulo="Média mensal" valor={formatarMoedaCompacta(media)} />
         <ResumoItem rotulo="Maior custo" valor={formatarMoedaCompacta(maior.total)} detalhe={maior.mes.mesCompleto} tom="perigo" />
         <ResumoItem rotulo="Menor custo" valor={formatarMoedaCompacta(menor.total)} detalhe={menor.mes.mesCompleto} tom="sucesso" />
         <ResumoItem
           rotulo="Variação no período"
-          valor={<DeltaBadge {...variacaoDeCusto(variacao)} className="text-[11px]" />}
+          valor={<DeltaBadge {...variacaoDeCusto(variacao)} className="text-[11.5px]" />}
           detalhe={`${meses[0].mes}/${meses[0].ano.slice(2)} → ${meses[meses.length - 1].mes}/${meses[meses.length - 1].ano.slice(2)}`}
         />
       </dl>
@@ -152,15 +155,15 @@ interface ResumoItemProps {
 
 function ResumoItem({ rotulo, valor, detalhe, tom }: ResumoItemProps) {
   return (
-    <div className="rounded-xl border border-[#EEF0F6] bg-[#F8F8FC] px-3 py-2">
-      <dt className="flex items-center gap-1.5 text-[9.5px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">
+    <div className="rounded-xl border border-[#EEF0F6] bg-[#F8F8FC] px-3.5 py-3">
+      <dt className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.07em] text-[#64748B]">
         {tom && (
-          <span className={cn("h-1.5 w-1.5 rounded-full", tom === "perigo" ? "bg-[#E11D48]" : "bg-[#059669]")} />
+          <span className={cn("h-2 w-2 shrink-0 rounded-full", tom === "perigo" ? "bg-[#E11D48]" : "bg-[#059669]")} />
         )}
         {rotulo}
       </dt>
-      <dd className="mt-0.5 text-[14px] font-bold leading-tight text-[#1E1B4B]">{valor}</dd>
-      {detalhe && <dd className="truncate text-[10px] text-[#94A3B8]">{detalhe}</dd>}
+      <dd className="mt-1 whitespace-nowrap text-[16px] font-bold leading-tight tabular-nums text-[#1E1B4B]">{valor}</dd>
+      {detalhe && <dd className="mt-0.5 text-[11px] text-[#64748B]">{detalhe}</dd>}
     </div>
   );
 }

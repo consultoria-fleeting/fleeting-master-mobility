@@ -1,19 +1,18 @@
 /**
- * Fábricas de marcadores e tooltips do Leaflet (`L.divIcon`).
+ * Fábricas de marcadores e tooltips do Leaflet (`L.divIcon`) — V1.
  *
- * Segurança: placa, condutor e endereço virão de terceiros (telemetria).
- * Por isso NADA aqui usa template string com HTML / innerHTML: todo o DOM é
- * montado com `document.createElement` + `textContent`, que escapa os valores
- * automaticamente (spec, seção 6 — nota de segurança).
+ * Segurança: placa, condutor e endereço virão de integrações externas.
+ * NADA aqui usa template string com HTML ou `innerHTML`: todo o DOM é
+ * construído com `document.createElement` + `textContent`, escapando valores
+ * automaticamente contra XSS.
  */
 
 import L from "leaflet";
 import type { EstadoBrasil, ItemCluster, VeiculoFrota } from "@/types/frota-mapa";
 import { LISTA_STATUS, STATUS_CONFIG, ZOOM_SEM_CLUSTER } from "./config";
 
-/* ---------- Helpers de DOM ---------- */
+/* ---------- Helpers de DOM seguro ---------- */
 
-/** Cria um elemento com classe e texto opcionais (texto sempre via textContent) */
 function criarElemento<K extends keyof HTMLElementTagNameMap>(
   tag: K,
   classe?: string,
@@ -25,7 +24,6 @@ function criarElemento<K extends keyof HTMLElementTagNameMap>(
   return elemento;
 }
 
-/** Formata contagens grandes: 1480 → "1.5k" */
 function formatarContagem(total: number): string {
   return total >= 1000 ? `${(total / 1000).toFixed(1)}k` : String(total);
 }
@@ -57,14 +55,13 @@ export function criarTooltipEstado(estado: EstadoBrasil, total: number): HTMLEle
 
 type Cluster = Extract<ItemCluster, { isCluster: true }>;
 
-/** Tamanho do cluster conforme a spec: 40 / 48 / 56 px */
 function tamanhoCluster(total: number): number {
   if (total <= 30) return 40;
   if (total <= 100) return 48;
   return 56;
 }
 
-/** Anel em conic-gradient mostrando a proporção de cada status no cluster */
+/** Anel em conic-gradient mostrando a proporção dos 5 status no cluster */
 function gradienteStatus(cluster: Cluster): string {
   let acumulado = 0;
   const fatias = LISTA_STATUS.filter((s) => cluster.statusCounts[s] > 0).map((status) => {
@@ -96,10 +93,25 @@ export function criarIconeCluster(cluster: Cluster): L.DivIcon {
 export function criarTooltipCluster(cluster: Cluster): HTMLElement {
   const raiz = criarElemento("div");
   raiz.appendChild(criarElemento("div", "fm-tooltip-titulo", `${cluster.count} veículos`));
-  const parados = cluster.statusCounts.parked + cluster.statusCounts.depot;
-  raiz.appendChild(criarElemento("div", "fm-tooltip-linha", `${cluster.statusCounts.in_transit} em rota · ${parados} parados`));
+  raiz.appendChild(
+    criarElemento(
+      "div",
+      "fm-tooltip-linha",
+      `${cluster.statusCounts.in_transit} em rota · ${cluster.statusCounts.stopped} parados`
+    )
+  );
+  const secundarios: string[] = [];
   if (cluster.statusCounts.maintenance > 0) {
-    raiz.appendChild(criarElemento("div", "fm-tooltip-linha", `${cluster.statusCounts.maintenance} em manutenção`));
+    secundarios.push(`${cluster.statusCounts.maintenance} em oficina`);
+  }
+  if (cluster.statusCounts.no_position > 0) {
+    secundarios.push(`${cluster.statusCounts.no_position} sem posição`);
+  }
+  if (cluster.statusCounts.no_telemetry > 0) {
+    secundarios.push(`${cluster.statusCounts.no_telemetry} sem telemetria`);
+  }
+  if (secundarios.length > 0) {
+    raiz.appendChild(criarElemento("div", "fm-tooltip-linha", secundarios.join(" · ")));
   }
   raiz.appendChild(criarElemento("div", "fm-tooltip-dica", "Clique para expandir"));
   return raiz;
@@ -114,19 +126,32 @@ export function criarIconeVeiculo(
 ): L.DivIcon {
   const grande = zoom >= ZOOM_SEM_CLUSTER;
   const tamanho = grande ? 44 : 32;
+  const ehSemPosicao = veiculo.status === "no_position";
+  const ehPosicaoCadastro = veiculo.origemPosicao === "cadastro";
 
   const classes = ["fm-pin", `fm-status-${veiculo.status}`];
   if (grande) classes.push("fm-pin-grande");
   if (selecionado) classes.push("fm-pin-selecionado");
+  if (ehSemPosicao) classes.push("fm-pin-esmaecido");
+  if (ehPosicaoCadastro) classes.push("fm-pin-cadastro");
   if (veiculo.alerta) classes.push(`fm-pin-alerta-${veiculo.alerta.nivel}`);
 
   const raiz = criarElemento("div", classes.join(" "));
 
-  const corpo = criarElemento("div", "fm-pin-corpo");
-  corpo.style.transform = `rotate(${veiculo.heading}deg)`;
-  corpo.appendChild(criarElemento("div", "fm-pin-seta"));
-  raiz.appendChild(corpo);
-  raiz.appendChild(criarElemento("div", "fm-pin-ponto"));
+  if (ehPosicaoCadastro) {
+    // Marcador visualmente distinto (losango/quadrado de alocação cadastral, sem seta de GPS)
+    const corpoCadastro = criarElemento("div", "fm-pin-corpo fm-pin-corpo-cadastro");
+    raiz.appendChild(corpoCadastro);
+    raiz.appendChild(criarElemento("span", "fm-pin-sigla-cadastro", "CAD"));
+  } else {
+    const corpo = criarElemento("div", "fm-pin-corpo");
+    if (veiculo.status === "in_transit") {
+      corpo.style.transform = `rotate(${veiculo.heading}deg)`;
+      corpo.appendChild(criarElemento("div", "fm-pin-seta"));
+    }
+    raiz.appendChild(corpo);
+    raiz.appendChild(criarElemento("div", "fm-pin-ponto"));
+  }
 
   if (veiculo.alerta) raiz.appendChild(criarElemento("span", "fm-pin-badge", "!"));
   if (grande) raiz.appendChild(criarElemento("div", "fm-pin-placa", veiculo.plate));
@@ -144,16 +169,39 @@ export function criarTooltipVeiculo(veiculo: VeiculoFrota): HTMLElement {
 
   const cabecalho = criarElemento("div", "fm-tooltip-cabecalho");
   cabecalho.appendChild(criarElemento("span", "fm-tooltip-placa", veiculo.plate));
-  const velocidade = criarElemento("span", "fm-tooltip-velocidade", `${veiculo.speed} km/h`);
-  velocidade.style.color = STATUS_CONFIG[veiculo.status].cor;
-  cabecalho.appendChild(velocidade);
+  const textoDireita =
+    veiculo.status === "in_transit"
+      ? `${veiculo.speed} km/h`
+      : STATUS_CONFIG[veiculo.status].labelCurto;
+  const badgeStatus = criarElemento("span", "fm-tooltip-velocidade", textoDireita);
+  badgeStatus.style.color = STATUS_CONFIG[veiculo.status].cor;
+  cabecalho.appendChild(badgeStatus);
   raiz.appendChild(cabecalho);
 
   raiz.appendChild(criarElemento("div", "fm-tooltip-titulo", veiculo.model));
   raiz.appendChild(criarElemento("div", "fm-tooltip-linha", veiculo.address));
   raiz.appendChild(criarElemento("div", "fm-tooltip-linha", `Condutor: ${veiculo.driver}`));
+
+  const rotuloOrigem =
+    veiculo.origemPosicao === "telemetria"
+      ? "Origem: Telemetria"
+      : `Origem: Cadastro (${veiculo.cidadeAlocacao})`;
+  raiz.appendChild(criarElemento("div", "fm-tooltip-meta", rotuloOrigem));
+
+  if (veiculo.dataHoraUltimaPosicao) {
+    raiz.appendChild(
+      criarElemento("div", "fm-tooltip-meta", `Última posição: ${veiculo.dataHoraUltimaPosicao}`)
+    );
+  }
+
   if (veiculo.alerta) {
-    raiz.appendChild(criarElemento("div", `fm-tooltip-alerta fm-tooltip-alerta-${veiculo.alerta.nivel}`, veiculo.alerta.descricao));
+    raiz.appendChild(
+      criarElemento(
+        "div",
+        `fm-tooltip-alerta fm-tooltip-alerta-${veiculo.alerta.nivel}`,
+        veiculo.alerta.descricao
+      )
+    );
   }
   return raiz;
 }

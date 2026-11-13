@@ -17,6 +17,7 @@ import { ArrowUp, Check, Crosshair, LoaderCircle, Sparkles, X } from "lucide-rea
 import { z } from "zod";
 import { cn } from "@/lib/utils";
 import { useEfeitoDigitacao } from "@/hooks/use-efeito-digitacao";
+import type { FiltrosTorre } from "@/types/torre-de-controle";
 import {
   ETAPAS_ANALISE,
   PERGUNTAS_SUGERIDAS,
@@ -182,11 +183,13 @@ function ConteudoResposta({ resposta, textoVisivel, concluido, onAcao }: Conteud
 /* ========================================================= */
 
 interface AiFleetAssistantProps {
+  /** Filtros ativos do cabeçalho (garante respostas coerentes com período e escopo) */
+  filtros?: FiltrosTorre;
   /** Chamado ao clicar em "Focar veículo no mapa" */
   onFocarVeiculo: (placa: string) => void;
 }
 
-export function AiFleetAssistant({ onFocarVeiculo }: AiFleetAssistantProps) {
+export function AiFleetAssistant({ filtros, onFocarVeiculo }: AiFleetAssistantProps) {
   const [pergunta, setPergunta] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [conversa, setConversa] = useState<Conversa | null>(null);
@@ -216,7 +219,11 @@ export function AiFleetAssistant({ onFocarVeiculo }: AiFleetAssistantProps) {
     limparTimers();
     setErro(null);
     setPergunta("");
-    setConversa({ id: Date.now(), pergunta: resultado.data, resposta: gerarRespostaIA(resultado.data) });
+    setConversa({
+      id: Date.now(),
+      pergunta: resultado.data,
+      resposta: gerarRespostaIA(resultado.data, filtros),
+    });
     setFase("analisando");
     setEtapaAtual(0);
     setPainelAberto(true);

@@ -1,12 +1,38 @@
 /**
- * Tipos do Mapa de Frota (Leaflet).
+ * Tipos do Mapa de Frota (Leaflet) — Torre de Controle V1.
  *
- * Contrato definido em `MAPA_REFERENCIA_VISUAL.md` (seção 4), adaptado
- * para frota leve: a categoria "truck" foi trocada por "pickup".
+ * Regras de status fechadas em 13/11/2026:
+ * 1. Em Rota (`in_transit`)        → posição < 5h e velocidade ≠ 0 (Telemetria)
+ * 2. Parado (`stopped`)            → posição ≤ 7 dias, velocidade = 0 ou > 5h (Telemetria)
+ * 3. Em Oficina (`maintenance`)    → O.S. aberta em Manutenção (prevalece sobre todos)
+ * 4. Sem posição (`no_position`)   → com telemetria, sem sinal > 7 dias (marcador esmaecido)
+ * 5. Sem telemetria (`no_telemetry`) → sem rastreador, posicionado pela cidade de alocação
  */
 
-/** Status operacional do veículo (define a cor do pino) */
-export type StatusVeiculo = "in_transit" | "parked" | "depot" | "maintenance";
+/** Status operacional exclusivo do veículo no mapa (na ordem oficial da legenda) */
+export type StatusVeiculo =
+  | "in_transit"
+  | "stopped"
+  | "maintenance"
+  | "no_position"
+  | "no_telemetry";
+
+/** Origem da coordenada exibida para o veículo no mapa e no drawer */
+export type OrigemPosicao = "telemetria" | "cadastro";
+
+/** Nível hierárquico exibido no filtro de agrupamento conforme o perfil do usuário */
+export type NivelAgrupamento =
+  | "filiais"
+  | "unidades"
+  | "regionais"
+  | "departamentos_restrito";
+
+/** Escopo global vindo do cabeçalho da Torre de Controle */
+export interface EscopoFrotaFiltro {
+  perfilDemo: NivelAgrupamento;
+  agrupamento: string;
+  locadora: string;
+}
 
 /** Categoria do veículo na frota leve */
 export type CategoriaVeiculo = "car" | "pickup" | "van" | "motorcycle";
@@ -43,7 +69,7 @@ export interface AlertaVeiculo {
   descricao: string;
 }
 
-/** Veículo individual (visão micro) */
+/** Veículo individual (visão micro e lista lateral) */
 export interface VeiculoFrota {
   id: string;
   plate: string;
@@ -53,23 +79,36 @@ export interface VeiculoFrota {
   driver: string;
   driverPhone: string;
   status: StatusVeiculo;
+  /** Indica se o veículo possui equipamento de telemetria ativo vinculado */
+  temTelemetria: boolean;
+  /** Indica se há ordem de serviço em aberto no módulo de Manutenção */
+  emOficina: boolean;
+  /** Origem da posição apresentada no mapa ("telemetria" ou "cadastro") */
+  origemPosicao: OrigemPosicao;
+  /** Data e hora formatadas da última posição recebida (null quando sem telemetria) */
+  dataHoraUltimaPosicao: string | null;
+  /** Cidade/UF de alocação registrada no cadastro do veículo */
+  cidadeAlocacao: string;
   /** km/h */
   speed: number;
-  /** Graus (0 = norte). Rotaciona a seta do pino */
+  /** Graus (0 = norte). Rotaciona a seta do pino nos veículos em rota/parados */
   heading: number;
   odometer: number;
-  /** % */
+  /** % (0 quando sem telemetria) */
   fuelLevel: number;
-  /** % */
+  /** % (0 quando sem telemetria) */
   batteryLevel: number;
-  /** Cliente/contrato ao qual o veículo está alocado (ex.: Comgás) */
-  grupo: string;
   filial: string;
+  regiao: RegiaoBrasil;
+  regional: string;
+  unidadeNegocio: string;
+  departamento: string;
   locadora: string;
   state: string;
   lat: number;
   lng: number;
   address: string;
+  /** Resumo amigável exibido abaixo do badge de status */
   lastTransmission: string;
   alerta: AlertaVeiculo | null;
 }
@@ -87,7 +126,7 @@ export type ItemCluster =
       dominantStatus: StatusVeiculo;
     };
 
-/** Estado dos filtros do mapa */
+/** Estado dos filtros internos do bloco do mapa */
 export interface FiltrosMapa {
   busca: string;
   uf: string;

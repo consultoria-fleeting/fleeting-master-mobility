@@ -1,7 +1,6 @@
 /*
- * Estilos do Mapa de Frota (Leaflet).
+ * Estilos do Mapa de Frota (Leaflet) — Torre de Controle V1.
  * Prefixo `fm-` (fleet map) para não colidir com outras telas.
- * Spec: MAPA_REFERENCIA_VISUAL.md, seções 6 e 7 — adaptado à identidade Índigo.
  */
 
 /* ---------- Container ---------- */
@@ -152,7 +151,7 @@
   color: #1e1b4b;
 }
 
-/* ---------- Pino de veículo (Micro) ---------- */
+/* ---------- Pino de veículo (Micro — 5 status oficiais) ---------- */
 
 .fm-pin {
   --fm-cor: #4f46e5;
@@ -164,9 +163,26 @@
 }
 
 .fm-status-in_transit { --fm-cor: #10b981; }
-.fm-status-parked { --fm-cor: #3b82f6; }
-.fm-status-depot { --fm-cor: #8b5cf6; }
+.fm-status-stopped { --fm-cor: #3b82f6; }
 .fm-status-maintenance { --fm-cor: #f59e0b; }
+.fm-status-no_position { --fm-cor: #64748b; }
+.fm-status-no_telemetry { --fm-cor: #7c3aed; }
+
+/* Regra "Sem posição (> 7 dias)": marcador esmaecido na última posição conhecida */
+.fm-pin-esmaecido {
+  opacity: 0.52;
+  transition: opacity 0.2s ease;
+}
+
+.fm-pin-esmaecido:hover,
+.fm-pin-esmaecido.fm-pin-selecionado {
+  opacity: 0.95;
+}
+
+.fm-pin-esmaecido .fm-pin-corpo {
+  border-style: dashed;
+  background: #f8fafc;
+}
 
 .fm-pin-corpo {
   position: absolute;
@@ -178,7 +194,34 @@
   transition: transform 0.3s ease;
 }
 
-/* Seta de direção (heading): triângulo no topo, gira junto com o corpo */
+/* Regra "Sem telemetria" (origem = cadastro): marcador distinto em losango arredondado */
+.fm-pin-corpo-cadastro {
+  inset: 5px;
+  border-radius: 7px;
+  transform: rotate(45deg);
+  background: var(--fm-cor);
+  border: 2.5px solid #ffffff;
+  box-shadow: 0 0 0 2px var(--fm-cor), 0 5px 12px -4px rgba(15, 23, 42, 0.55);
+}
+
+.fm-pin-sigla-cadastro {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  pointer-events: none;
+}
+
+.fm-pin-grande .fm-pin-sigla-cadastro {
+  font-size: 8.5px;
+}
+
+/* Seta de direção (heading): triângulo no topo, gira junto com o corpo em Em Rota */
 .fm-pin-seta {
   position: absolute;
   top: -9px;
@@ -288,7 +331,7 @@
   font-size: 11px;
   line-height: 1.4;
   box-shadow: 0 12px 28px -12px rgba(30, 27, 75, 0.7);
-  max-width: 240px;
+  max-width: 250px;
   white-space: normal;
 }
 
@@ -310,6 +353,12 @@
   color: #c7d2fe;
 }
 
+.fm-tooltip-meta {
+  margin-top: 2px;
+  color: #a5b4fc;
+  font-size: 10px;
+}
+
 .fm-tooltip-dica {
   margin-top: 4px;
   color: #818cf8;
@@ -317,7 +366,7 @@
 }
 
 .fm-tooltip-veiculo {
-  min-width: 190px;
+  min-width: 200px;
 }
 
 .fm-tooltip-cabecalho {

@@ -1,37 +1,36 @@
 /**
- * Motor de respostas do Assistente de IA da Frota (mock para demonstração).
+ * Motor de respostas do Assistente de IA da Frota (mock para demonstração — Torre V1).
  *
  * Identifica a intenção da pergunta por palavras-chave (ou placa) e monta uma
- * resposta rica a partir dos MESMOS mocks usados na Torre de Controle e no mapa, para que
- * tudo seja coerente durante a apresentação.
+ * resposta rica a partir do MESMO motor consolidado (`obterDadosTorre`) usado
+ * na Torre de Controle e no mapa, respeitando:
+ * - Os 5 status exclusivos do mapa (`Em Rota`, `Parado`, `Em Oficina`,
+ *   `Sem posição >7d` e `Sem telemetria`);
+ * - Os 3 novos quadros 2×2 (`Manutenções`, `Multas & CNH` e `Sinistros`);
+ * - O escopo de permissão e período fechado selecionados no cabeçalho.
  *
  * TODO(backend): substituir `gerarRespostaIA` por uma chamada ao endpoint de IA
  * (via BFF, sem expor chaves no cliente). O contrato `RespostaIA` pode ser mantido.
  */
 
-import {
-  CATEGORIAS_TCO,
-  CONDUTORES_ATENCAO,
-  HISTORICO_TCO,
-  MANUTENCAO,
-  VEICULOS_ATENCAO,
-} from "./mock-data";
+import type { FiltrosTorre } from "@/types/torre-de-controle";
 import { STATUS_CONFIG } from "./mapa/config";
 import { obterResumoFrota, obterVeiculoPorPlaca } from "./mapa/dados-frota";
+import {
+  CATEGORIAS_TCO,
+  ULTIMO_MES_FECHADO_2026,
+  obterDadosTorre,
+  type DadosTorreConsolidados,
+} from "./mock-data";
 import { formatarMoeda, formatarMoedaCompacta, totalDoMes } from "./tco/tco-utils";
 
-/** TCO do mês atual e do anterior, a partir do mesmo histórico usado no drawer "TCO do Mês" */
-function obterResumoTco() {
-  const ids = CATEGORIAS_TCO.map((categoria) => categoria.id);
-  const mesAtual = HISTORICO_TCO[HISTORICO_TCO.length - 1];
-  const mesAnterior = HISTORICO_TCO[HISTORICO_TCO.length - 2];
-  return {
-    mesAtual,
-    total: totalDoMes(mesAtual, ids),
-    totalAnterior: totalDoMes(mesAnterior, ids),
-    itens: CATEGORIAS_TCO.map((categoria) => ({ label: categoria.label, valor: mesAtual.custos[categoria.id] })),
-  };
-}
+const FILTROS_PADRAO: FiltrosTorre = {
+  mes: String(ULTIMO_MES_FECHADO_2026),
+  ano: "2026",
+  agrupamento: "todos",
+  locadora: "todas",
+  perfilDemo: "filiais",
+};
 
 /* ========================================================= */
 /*  CONTRATO                                                 */
@@ -69,27 +68,26 @@ export interface RespostaIA {
 /* ========================================================= */
 
 export const PERGUNTAS_SUGERIDAS = [
+  "Panorama dos 5 status da frota",
   "Quais veículos têm alerta crítico agora?",
-  "Resumo da frota em manutenção",
-  "Qual filial teve maior consumo na semana?",
+  "Resumo de multas e CNHs",
   "Como está o TCO deste mês?",
-  "Condutores com CNH irregular",
+  "Resumo de manutenções e sinistros",
   "Onde está o veículo SVR2C84?",
 ];
 
 /** Etapas exibidas no estado "Analisando dados da frota..." */
 export const ETAPAS_ANALISE = [
-  "Consultando telemetria de 52 veículos",
-  "Cruzando alertas, manutenções e CNHs",
-  "Gerando resposta",
+  "Consultando frota dentro do seu escopo de permissão",
+  "Cruzando status do mapa, manutenções, multas e sinistros",
+  "Gerando resposta consolidada",
 ];
 
 /* ========================================================= */
 /*  DADOS AUXILIARES (mock)                                  */
 /* ========================================================= */
 
-/** Consumo de combustível por filial na última semana (mock) */
-const CONSUMO_SEMANA = [
+const CONSUMO_FILIAIS = [
   { filial: "São Paulo — Matriz", valor: 1142, litros: 196, placaDestaque: "GHJ7E89" },
   { filial: "Campinas", valor: 486, litros: 84, placaDestaque: "MNB2M34" },
   { filial: "Rio de Janeiro", valor: 438, litros: 76, placaDestaque: "RIO3Q12" },
@@ -97,9 +95,12 @@ const CONSUMO_SEMANA = [
   { filial: "Curitiba", valor: 297, litros: 52, placaDestaque: "PRN8Y34" },
 ];
 
-const formatoMoeda = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+const formatoMoedaInteiro = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+  maximumFractionDigits: 0,
+});
 
-/** Remove acentos e caixa para comparar palavras-chave */
 function normalizar(texto: string): string {
   return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
@@ -118,66 +119,101 @@ function extrairPlaca(pergunta: string): string | null {
 /*  RESPOSTAS POR INTENÇÃO                                   */
 /* ========================================================= */
 
-function respostaVeiculo(placa: string): RespostaIA | null {
-  const veiculo = obterVeiculoPorPlaca(placa);
+function respostaVeiculo(placa: string, dados: DadosTorreConsolidados): RespostaIA | null {
+  const veiculo = obterVeiculoPorPlaca(placa, dados.escopoMapa);
   if (!veiculo) return null;
 
-  const status = STATUS_CONFIG[veiculo.status].label.toLowerCase();
+  const statusLabel = STATUS_CONFIG[veiculo.status].label;
+  const origemTexto =
+    veiculo.origemPosicao === "telemetria"
+      ? `origem Telemetria (última posição em ${veiculo.dataHoraUltimaPosicao ?? veiculo.lastTransmission})`
+      : `origem Cadastro do veículo (alocado em ${veiculo.cidadeAlocacao})`;
+
   const alerta = veiculo.alerta
     ? ` Atenção: ${veiculo.alerta.nivel === "critico" ? "alerta crítico" : "pendência"} — ${veiculo.alerta.descricao.toLowerCase()}.`
     : " Nenhuma pendência ativa para este veículo.";
 
   return {
-    texto: `O ${veiculo.model} ${veiculo.plate} está ${status} em ${veiculo.address}, com ${veiculo.driver} como condutor. Última transmissão: ${veiculo.lastTransmission.toLowerCase()}.${alerta}`,
+    texto: `O ${veiculo.model} ${veiculo.plate} está com status "${statusLabel}" em ${veiculo.address}, condutor ${veiculo.driver}, com ${origemTexto}.${alerta}`,
     metricas: [
-      { label: "Velocidade", valor: `${veiculo.speed} km/h`, tom: veiculo.speed > 0 ? "sucesso" : "neutro" },
-      { label: "Combustível", valor: `${veiculo.fuelLevel}%`, tom: veiculo.fuelLevel < 25 ? "perigo" : "indigo" },
-      { label: "Odômetro", valor: `${veiculo.odometer.toLocaleString("pt-BR")} km`, tom: "neutro" },
+      {
+        label: "Status no mapa",
+        valor: STATUS_CONFIG[veiculo.status].labelCurto,
+        tom:
+          veiculo.status === "in_transit"
+            ? "sucesso"
+            : veiculo.status === "maintenance"
+              ? "alerta"
+              : "indigo",
+      },
+      {
+        label: "Origem posição",
+        valor: veiculo.origemPosicao === "telemetria" ? "Telemetria" : "Cadastro",
+        tom: veiculo.origemPosicao === "telemetria" ? "indigo" : "neutro",
+      },
+      {
+        label: "Odômetro",
+        valor: `${veiculo.odometer.toLocaleString("pt-BR")} km`,
+        tom: "neutro",
+      },
     ],
     itens: [],
     acoes: [{ tipo: "focar-veiculo", placa: veiculo.plate, label: `Focar ${veiculo.plate} no mapa` }],
   };
 }
 
-function respostaAlertas(): RespostaIA {
-  const criticos = VEICULOS_ATENCAO.filter((v) => v.status === "Crítico");
-  const atencao = VEICULOS_ATENCAO.filter((v) => v.status === "Atenção");
-  const cnhIrregular = CONDUTORES_ATENCAO.filter((c) => c.status !== "CNH à Vencer").length;
+function respostaAlertas(dados: DadosTorreConsolidados): RespostaIA {
+  const criticos = dados.veiculosAtencao.filter((v) => v.status === "Crítico");
+  const atencao = dados.veiculosAtencao.filter((v) => v.status === "Atenção");
+  const cnhIrregular = dados.condutoresAtencao.filter((c) => c.status !== "CNH à Vencer").length;
 
+  if (criticos.length === 0 && atencao.length === 0) {
+    return {
+      texto: `No recorte atual (${dados.escopoRotulo}) não há veículos com alerta crítico ou em atenção.`,
+      metricas: [
+        { label: "Críticos", valor: "0", tom: "sucesso" },
+        { label: "Em atenção", valor: "0", tom: "neutro" },
+      ],
+      itens: [],
+      acoes: [],
+    };
+  }
+
+  const destaque = criticos[0] ?? atencao[0];
   return {
-    texto: `Neste momento há ${criticos.length} veículos com alerta crítico e ${atencao.length} em atenção. A prioridade é o ${criticos[0].placa} (${criticos[0].modelo}), com revisão vencida há 42 dias em ${criticos[0].filial}, seguido do ${criticos[1].placa}, que está com sinistro em aberto e já foi encaminhado à oficina. Recomendo bloquear novas reservas do ${criticos[0].placa} até a revisão ser agendada.`,
+    texto: `No escopo atual há ${criticos.length} veículo(s) com alerta crítico e ${atencao.length} em atenção. A principal prioridade é o ${destaque.placa} (${destaque.modelo}), com "${destaque.pendencia}" em ${destaque.filial}.`,
     metricas: [
       { label: "Críticos", valor: String(criticos.length), tom: "perigo" },
       { label: "Em atenção", valor: String(atencao.length), tom: "alerta" },
       { label: "CNH irregular", valor: String(cnhIrregular), tom: "indigo" },
     ],
-    itens: criticos.map((v) => ({
+    itens: [...criticos, ...atencao].slice(0, 4).map((v) => ({
       titulo: `${v.placa} · ${v.modelo}`,
       descricao: `${v.pendencia} — ${v.filial}`,
-      tom: "perigo" as const,
+      tom: v.status === "Crítico" ? ("perigo" as const) : ("alerta" as const),
     })),
-    acoes: criticos.map((v) => ({ tipo: "focar-veiculo" as const, placa: v.placa, label: `Focar ${v.placa} no mapa` })),
+    acoes: [...criticos, ...atencao]
+      .slice(0, 2)
+      .map((v) => ({ tipo: "focar-veiculo" as const, placa: v.placa, label: `Focar ${v.placa} no mapa` })),
   };
 }
 
-function respostaManutencao(): RespostaIA {
-  const { emManutencao } = obterResumoFrota();
-  const { mesAtual, total: totalTco } = obterResumoTco();
-  const custoManutencao = mesAtual.custos.manutencao;
-  const percentual = Math.round((custoManutencao / totalTco) * 100);
-  const porLabel = Object.fromEntries(MANUTENCAO.map((m) => [m.label, m.quantidade]));
+function respostaManutencaoESinistros(dados: DadosTorreConsolidados): RespostaIA {
+  const { emManutencao } = obterResumoFrota(dados.escopoMapa);
+  const porIdManut = Object.fromEntries(dados.quadroManutencoes.map((i) => [i.id, i.valor]));
+  const porIdSin = Object.fromEntries(dados.quadroSinistros.map((i) => [i.id, i.valor]));
 
   return {
-    texto: `Hoje ${emManutencao.length} veículos estão fora de operação por manutenção: ${emManutencao.map((v) => `${v.plate} (${v.filial})`).join(", ")}. Há ${porLabel["Rev. Vencidas"]} revisão vencida e ${porLabel["Rev. a Vencer"]} a vencer nos próximos 30 dias. O custo de manutenção do mês soma ${formatoMoeda.format(custoManutencao)}, ${percentual}% do TCO da frota.`,
+    texto: `Em ${dados.periodoRotulo}, o quadro de Manutenções registra ${porIdManut["manut-total"]} manutenções no mês, com posição atual de ${porIdManut["manut-vencidas"]} revisão(ões) vencida(s), ${porIdManut["manut-a-vencer"]} a vencer e ${porIdManut["manut-oficina"]} veículo(s) em oficina (precedência máxima no mapa). Já em Sinistros foram ${porIdSin["sinistros-total"]} ocorrência(s) no mês, somando ${porIdSin["sinistros-custo"]}.`,
     metricas: [
-      { label: "Em oficina", valor: String(porLabel["Em Oficina"]), tom: "neutro" },
-      { label: "Rev. vencidas", valor: String(porLabel["Rev. Vencidas"]), tom: "perigo" },
-      { label: "Rev. a vencer", valor: String(porLabel["Rev. a Vencer"]), tom: "alerta" },
-      { label: "Custo no mês", valor: `R$ ${(custoManutencao / 1000).toFixed(1).replace(".", ",")} mil`, tom: "indigo" },
+      { label: "Manut. no mês", valor: porIdManut["manut-total"] ?? "0", tom: "indigo" },
+      { label: "Em oficina", valor: porIdManut["manut-oficina"] ?? "0", tom: "alerta" },
+      { label: "Rev. vencidas", valor: porIdManut["manut-vencidas"] ?? "0", tom: "perigo" },
+      { label: "Custo sinistros", valor: porIdSin["sinistros-custo"] ?? "R$ 0", tom: "perigo" },
     ],
     itens: emManutencao.map((v) => ({
       titulo: `${v.plate} · ${v.model}`,
-      descricao: v.alerta ? `${v.alerta.descricao} — ${v.filial}` : `Manutenção preventiva — ${v.filial}`,
+      descricao: `Em Oficina (${v.origemPosicao === "telemetria" ? "Telemetria" : "Cadastro"}) — ${v.filial}`,
       tom: v.alerta?.nivel === "critico" ? ("perigo" as const) : ("alerta" as const),
     })),
     acoes: emManutencao.slice(0, 2).map((v) => ({
@@ -188,83 +224,89 @@ function respostaManutencao(): RespostaIA {
   };
 }
 
-function respostaConsumo(): RespostaIA {
-  const total = CONSUMO_SEMANA.reduce((soma, f) => soma + f.valor, 0);
-  const litros = CONSUMO_SEMANA.reduce((soma, f) => soma + f.litros, 0);
-  const lider = CONSUMO_SEMANA[0];
-  const participacao = Math.round((lider.valor / total) * 100);
+function respostaMultasECnh(dados: DadosTorreConsolidados): RespostaIA {
+  const porId = Object.fromEntries(dados.quadroMultasCnh.map((i) => [i.id, i.valor]));
+  const irregulares = dados.condutoresAtencao.slice(0, 3);
 
   return {
-    texto: `Na última semana, a filial ${lider.filial} liderou o consumo com ${formatoMoeda.format(lider.valor)} em ${lider.litros} litros — ${participacao}% do gasto da frota —, puxada principalmente pelas picapes a diesel em rota (destaque para a ${lider.placaDestaque}). Em seguida aparecem ${CONSUMO_SEMANA[1].filial} e ${CONSUMO_SEMANA[2].filial}. A média de consumo da frota está em 11,6 km/L, 2% melhor que o mês anterior.`,
+    texto: `No quadro de Multas & CNH (${dados.periodoRotulo}), foram registradas ${porId["multas-total"]} infrações no mês fechado. Na posição atual há ${porId["multas-pendentes"]} multa(s) pendente(s) de identificação de condutor, ${porId["multas-vencidas"]} multa(s) vencida(s) e ${porId["cnhs-vencidas"]} CNH(s) vencida(s).`,
     metricas: [
-      { label: "Gasto na semana", valor: formatoMoeda.format(total), tom: "indigo" },
-      { label: "Litros", valor: `${litros} L`, tom: "neutro" },
-      { label: "Média", valor: "11,6 km/L", tom: "sucesso" },
+      { label: "Infrações (mês)", valor: porId["multas-total"] ?? "0", tom: "indigo" },
+      { label: "Pend. identif.", valor: porId["multas-pendentes"] ?? "0", tom: "alerta" },
+      { label: "Multas vencidas", valor: porId["multas-vencidas"] ?? "0", tom: "perigo" },
+      { label: "CNHs vencidas", valor: porId["cnhs-vencidas"] ?? "0", tom: "perigo" },
     ],
-    itens: CONSUMO_SEMANA.slice(0, 3).map((f, i) => ({
-      titulo: `${i + 1}º ${f.filial}`,
-      descricao: `${formatoMoeda.format(f.valor)} · ${f.litros} L`,
-      tom: i === 0 ? ("alerta" as const) : ("neutro" as const),
-    })),
-    acoes: [{ tipo: "focar-veiculo", placa: lider.placaDestaque, label: `Focar ${lider.placaDestaque} no mapa` }],
-  };
-}
-
-function respostaTco(): RespostaIA {
-  const { mesAtual, total: totalTco, totalAnterior, itens } = obterResumoTco();
-  const [maior] = [...itens].sort((a, b) => b.valor - a.valor);
-  const variacao = Math.round(((totalTco - totalAnterior) / totalAnterior) * 100);
-  const mediaPorVeiculo = formatarMoeda(totalTco / mesAtual.veiculos);
-
-  return {
-    texto: `O TCO do mês está em ${formatarMoedaCompacta(totalTco)}, alta de ${variacao}% sobre o mês anterior (${formatarMoedaCompacta(totalAnterior)}). ${maior.label} é o maior componente, com ${Math.round((maior.valor / totalTco) * 100)}% do total. A boa notícia: o custo por km caiu 6%, para R$ 2,38, indicando melhor aproveitamento da frota. A média por veículo é de ${mediaPorVeiculo}. Abra o card "TCO do Mês" para ver a evolução mês a mês.`,
-    metricas: [
-      { label: "TCO do mês", valor: formatarMoedaCompacta(totalTco), tom: "alerta" },
-      { label: "Custo por km", valor: "R$ 2,38", tom: "sucesso" },
-      { label: "Média/veículo", valor: mediaPorVeiculo, tom: "indigo" },
-    ],
-    itens: itens.slice(0, 3).map((i) => ({
-      titulo: i.label,
-      descricao: `${formatarMoedaCompacta(i.valor)} · ${Math.round((i.valor / totalTco) * 100)}% do TCO`,
-      tom: "neutro" as const,
-    })),
-    acoes: [],
-  };
-}
-
-function respostaCondutores(): RespostaIA {
-  const vencidas = CONDUTORES_ATENCAO.filter((c) => c.status === "CNH Vencida");
-  const impedimento = CONDUTORES_ATENCAO.filter((c) => c.status === "CNH com Impedimento");
-  const aVencer = CONDUTORES_ATENCAO.filter((c) => c.status === "CNH à Vencer");
-
-  return {
-    texto: `${CONDUTORES_ATENCAO.length} condutores exigem atenção. ${vencidas[0].nome} está com a CNH vencida desde 12/06 e já foi bloqueado para novas reservas; ${impedimento[0].nome} tem a CNH suspensa por pontuação (22 pontos em 12 meses). Outros ${aVencer.length} condutores estão dentro da janela de 60 dias para renovação — o mais urgente é ${aVencer[0].nome}, com vencimento em 18 dias.`,
-    metricas: [
-      { label: "CNH vencida", valor: String(vencidas.length), tom: "perigo" },
-      { label: "Impedimento", valor: String(impedimento.length), tom: "indigo" },
-      { label: "A vencer (60d)", valor: String(aVencer.length), tom: "alerta" },
-    ],
-    itens: [...vencidas, ...impedimento].map((c) => ({
+    itens: irregulares.map((c) => ({
       titulo: c.nome,
       descricao: `${c.status} · ${c.veiculo}`,
-      tom: c.status === "CNH Vencida" ? ("perigo" as const) : ("indigo" as const),
+      tom: c.status === "CNH Vencida" ? ("perigo" as const) : ("alerta" as const),
     })),
-    acoes: [...vencidas, ...impedimento].map((c) => {
+    acoes: irregulares.slice(0, 2).map((c) => {
       const placa = c.veiculo.split(" · ")[0];
       return { tipo: "focar-veiculo" as const, placa, label: `Ver veículo de ${c.nome.split(" ")[0]}` };
     }),
   };
 }
 
-function respostaPanorama(prefixo: string): RespostaIA {
-  const resumo = obterResumoFrota();
+function respostaConsumo(dados: DadosTorreConsolidados): RespostaIA {
+  const kpiAbast = dados.kpis.find((k) => k.id === "abastecimento");
+  const mediaDetalhe = kpiAbast?.detalhes.find((d) => d.label.includes("km/l"))?.valor ?? "11,6 km/l";
+  const lider = CONSUMO_FILIAIS[0];
+
   return {
-    texto: `${prefixo}A frota tem ${resumo.total} veículos ativos: ${resumo.porStatus.in_transit} em rota agora, ${resumo.porStatus.parked} estacionados, ${resumo.porStatus.depot} no pátio e ${resumo.porStatus.maintenance} em manutenção. Por contrato, são ${resumo.porGrupo["Vivo"] ?? 0} veículos Vivo, ${resumo.porGrupo["Comgás"] ?? 0} Comgás e ${resumo.porGrupo["Coprel"] ?? 0} Coprel. ${resumo.comAlerta.length} veículos têm pendências abertas.`,
+    texto: `No período fechado (${dados.periodoRotulo}), o gasto em Abastecimento foi de ${kpiAbast?.valor ?? "R$ 9,1 mil"} (${kpiAbast?.sub ?? "988 L"}). A média de consumo apurada pela fórmula oficial (km final − km inicial) ÷ litros abastecidos é de ${mediaDetalhe}. Clique no card "Abastecimento (mês)" para ver a memória completa.`,
     metricas: [
-      { label: "Em rota", valor: String(resumo.porStatus.in_transit), tom: "sucesso" },
-      { label: "Estacionados", valor: String(resumo.porStatus.parked), tom: "indigo" },
-      { label: "Pátio", valor: String(resumo.porStatus.depot), tom: "neutro" },
-      { label: "Manutenção", valor: String(resumo.porStatus.maintenance), tom: "alerta" },
+      { label: "Gasto no mês", valor: kpiAbast?.valor ?? "—", tom: "indigo" },
+      { label: "Volume", valor: kpiAbast?.sub ?? "—", tom: "neutro" },
+      { label: "Consumo (km/l)", valor: mediaDetalhe, tom: "sucesso" },
+    ],
+    itens: CONSUMO_FILIAIS.slice(0, 3).map((f, i) => ({
+      titulo: `${i + 1}º ${f.filial}`,
+      descricao: `${formatoMoedaInteiro.format(f.valor)} · ${f.litros} L na última semana`,
+      tom: i === 0 ? ("alerta" as const) : ("neutro" as const),
+    })),
+    acoes: [{ tipo: "focar-veiculo", placa: lider.placaDestaque, label: `Focar ${lider.placaDestaque} no mapa` }],
+  };
+}
+
+function respostaTco(dados: DadosTorreConsolidados): RespostaIA {
+  const ids = CATEGORIAS_TCO.map((c) => c.id);
+  const mesAtual = dados.historicoTco[dados.historicoTco.length - 1];
+  const mesAnterior = dados.historicoTco[dados.historicoTco.length - 2];
+  const totalTco = totalDoMes(mesAtual, ids);
+  const totalAnt = mesAnterior ? totalDoMes(mesAnterior, ids) : totalTco;
+  const itens = CATEGORIAS_TCO.map((c) => ({ label: c.label, valor: mesAtual.custos[c.id] }));
+  const [maior] = [...itens].sort((a, b) => b.valor - a.valor);
+  const kpiCustoKm = dados.kpis.find((k) => k.id === "custo-km");
+  const mediaPorVeiculo = mesAtual.veiculos > 0 ? formatarMoeda(totalTco / mesAtual.veiculos) : "R$ 0,00";
+
+  return {
+    texto: `Em ${dados.periodoRotulo}, o TCO fechado está em ${formatarMoedaCompacta(totalTco)} (frente a ${formatarMoedaCompacta(totalAnt)} em ${dados.mesAnteriorRotulo}). ${maior.label} representa a maior fatia (${totalTco > 0 ? Math.round((maior.valor / totalTco) * 100) : 0}% do total), o Custo por KM fechado está em ${kpiCustoKm?.valor ?? "—"} e a média por veículo ativo é de ${mediaPorVeiculo}.`,
+    metricas: [
+      { label: "TCO do mês", valor: formatarMoedaCompacta(totalTco), tom: "alerta" },
+      { label: "Custo por km", valor: kpiCustoKm?.valor ?? "—", tom: "sucesso" },
+      { label: "Média/veículo", valor: mediaPorVeiculo, tom: "indigo" },
+    ],
+    itens: itens.slice(0, 3).map((i) => ({
+      titulo: i.label,
+      descricao: `${formatarMoedaCompacta(i.valor)} · ${totalTco > 0 ? Math.round((i.valor / totalTco) * 100) : 0}% do TCO`,
+      tom: "neutro" as const,
+    })),
+    acoes: [],
+  };
+}
+
+function respostaPanorama(prefixo: string, dados: DadosTorreConsolidados): RespostaIA {
+  const c = dados.contagemStatusMapa;
+  const total = dados.veiculosEscopo.length;
+
+  return {
+    texto: `${prefixo}No escopo selecionado (${dados.escopoRotulo}) há ${total} veículos ativos distribuídos nos 5 status exclusivos do mapa: ${c.in_transit} Em Rota, ${c.stopped} Parados, ${c.maintenance} Em Oficina, ${c.no_position} Sem posição (há mais de 7 dias) e ${c.no_telemetry} Sem telemetria (posicionados pela cidade de alocação do cadastro).`,
+    metricas: [
+      { label: "Em Rota", valor: String(c.in_transit), tom: "sucesso" },
+      { label: "Parado", valor: String(c.stopped), tom: "indigo" },
+      { label: "Em Oficina", valor: String(c.maintenance), tom: "alerta" },
+      { label: "Sem pos. / Sem tel.", valor: `${c.no_position} / ${c.no_telemetry}`, tom: "neutro" },
     ],
     itens: [],
     acoes: [],
@@ -275,25 +317,38 @@ function respostaPanorama(prefixo: string): RespostaIA {
 /*  ROTEADOR DE INTENÇÕES                                    */
 /* ========================================================= */
 
-export function gerarRespostaIA(pergunta: string): RespostaIA {
+export function gerarRespostaIA(pergunta: string, filtros: FiltrosTorre = FILTROS_PADRAO): RespostaIA {
+  const dados = obterDadosTorre(filtros);
+
   const placa = extrairPlaca(pergunta);
   if (placa) {
-    const resposta = respostaVeiculo(placa);
+    const resposta = respostaVeiculo(placa, dados);
     if (resposta) return resposta;
   }
 
   const texto = normalizar(pergunta);
 
-  if (contemAlguma(texto, ["critic", "alerta", "urgent", "risco", "problema"])) return respostaAlertas();
-  if (contemAlguma(texto, ["manuten", "oficina", "revis", "sinistro"])) return respostaManutencao();
-  if (contemAlguma(texto, ["consumo", "abastec", "combust", "litro", "gasolina", "diesel"])) return respostaConsumo();
-  if (contemAlguma(texto, ["tco", "custo", "gasto", "financ", "despesa"])) return respostaTco();
-  if (contemAlguma(texto, ["cnh", "condutor", "motorista", "habilita"])) return respostaCondutores();
-  if (contemAlguma(texto, ["rota", "status", "frota", "resumo", "quantos", "panorama", "geral"])) {
-    return respostaPanorama("");
+  if (contemAlguma(texto, ["critic", "alerta", "urgent", "risco", "problema"])) {
+    return respostaAlertas(dados);
+  }
+  if (contemAlguma(texto, ["multa", "infrac", "identific", "cnh", "condutor", "motorista", "habilita"])) {
+    return respostaMultasECnh(dados);
+  }
+  if (contemAlguma(texto, ["manuten", "oficina", "revis", "sinistro", "vitima", "perda total"])) {
+    return respostaManutencaoESinistros(dados);
+  }
+  if (contemAlguma(texto, ["consumo", "abastec", "combust", "litro", "gasolina", "diesel", "km/l"])) {
+    return respostaConsumo(dados);
+  }
+  if (contemAlguma(texto, ["tco", "custo", "gasto", "financ", "despesa"])) {
+    return respostaTco(dados);
+  }
+  if (contemAlguma(texto, ["rota", "status", "frota", "resumo", "quantos", "panorama", "geral", "telemetria"])) {
+    return respostaPanorama("", dados);
   }
 
   return respostaPanorama(
-    "Na versão de demonstração eu respondo sobre alertas, manutenção, consumo, TCO, CNHs e placas específicas. Enquanto isso, aqui vai um panorama: "
+    "Na versão de demonstração eu respondo sobre os 5 status da frota, alertas, manutenções, sinistros, multas & CNH, consumo, TCO e placas específicas. Aqui vai o panorama atual: ",
+    dados
   );
 }

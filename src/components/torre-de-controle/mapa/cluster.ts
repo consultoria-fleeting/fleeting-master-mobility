@@ -1,10 +1,8 @@
 /**
  * Clustering em grade de pixels (sem biblioteca externa).
  *
- * Implementação fiel à seção 5 de `MAPA_REFERENCIA_VISUAL.md`:
- * projeta cada veículo em Mercator, agrupa por célula de `raio` px no zoom atual
- * e devolve clusters (com contagem por status) ou veículos isolados.
- * Roda em milissegundos para milhares de pontos.
+ * Projeta cada veículo em Mercator, agrupa por célula de `raio` px no zoom atual
+ * e devolve clusters (com contagem nos 5 status oficiais) ou veículos isolados.
  */
 
 import type {
@@ -13,7 +11,7 @@ import type {
   StatusVeiculo,
   VeiculoFrota,
 } from "@/types/frota-mapa";
-import { ZOOM_SEM_CLUSTER } from "./config";
+import { criarContagemStatusVazia, ZOOM_SEM_CLUSTER } from "./config";
 
 /** Projeção Mercator normalizada (0..1) */
 function latLngParaPonto(lat: number, lng: number) {
@@ -40,7 +38,7 @@ export function clusterVehicles(
     return veiculos.map((v) => ({ isCluster: false, data: v, lat: v.lat, lng: v.lng }));
   }
 
-  const tamanhoMundo = 256 * Math.pow(2, zoom); // tamanho do mundo em px neste zoom
+  const tamanhoMundo = 256 * Math.pow(2, zoom);
   const grade = new Map<string, CelulaGrade>();
 
   for (const v of veiculos) {
@@ -52,7 +50,7 @@ export function clusterVehicles(
         veiculos: [],
         somaLat: 0,
         somaLng: 0,
-        statusCounts: { in_transit: 0, parked: 0, depot: 0, maintenance: 0 },
+        statusCounts: criarContagemStatusVazia(),
       };
       grade.set(chave, celula);
     }

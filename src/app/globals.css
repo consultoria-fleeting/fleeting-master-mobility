@@ -210,3 +210,33 @@
     animation: none;
   }
 }
+
+/* Impressão / Exportação em PDF do modal "Relatório Gerencial" */
+@media print {
+  body:has(#relatorio-gerencial-print) * {
+    visibility: hidden;
+  }
+
+  body:has(#relatorio-gerencial-print) #relatorio-gerencial-print,
+  body:has(#relatorio-gerencial-print) #relatorio-gerencial-print * {
+    visibility: visible;
+  }
+
+  body:has(#relatorio-gerencial-print) #relatorio-gerencial-print {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    max-height: none !important;
+    overflow: visible !important;
+    background: #ffffff;
+  }
+
+  body:has(#relatorio-gerencial-print) #relatorio-gerencial-print .rolagem-suave {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  body:has(#relatorio-gerencial-print) .no-print {
+    display: none !important;
+  }
+}

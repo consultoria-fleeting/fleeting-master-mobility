@@ -1,12 +1,11 @@
 /**
- * VehicleDrawer — Painel lateral com o detalhe de um veículo.
+ * VehicleDrawer — Cartão lateral com o detalhe completo de um veículo (V1).
  *
- * Ordem (spec, seção 7): placa Mercosul + modelo/categoria/id → status e
- * horário da transmissão → posição no último GET (endereço, lat/lng, copiar,
- * centralizar, link OSM) → telemetria (velocidade, odômetro, combustível,
- * bateria) → alocação → condutor.
- *
- * Usa o Sheet do shadcn/ui. O telefone do condutor é exibido mascarado (PII).
+ * Atende às regras da Torre de Controle V1:
+ * - Informa explicitamente a ORIGEM DA POSIÇÃO (`Telemetria` ou `Cadastro do veículo`);
+ * - Informa a DATA E HORA DA ÚLTIMA POSIÇÃO (ou cidade de alocação quando sem telemetria);
+ * - Trata veículos sem telemetria e veículos sem posição há > 7 dias sem inventar leituras;
+ * - Mantém o telefone do condutor mascarado (PII/LGPD).
  */
 
 "use client";
@@ -14,7 +13,9 @@
 import { useState } from "react";
 import {
   BatteryMedium,
+  Building2,
   Check,
+  Clock,
   Copy,
   Crosshair,
   ExternalLink,
@@ -23,11 +24,14 @@ import {
   MapPin,
   Navigation,
   Phone,
+  Radio,
   TriangleAlert,
+  X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetDescription,
   SheetHeader,
@@ -75,7 +79,6 @@ interface MetricaTelemetriaProps {
   icone: LucideIcon;
   label: string;
   valor: string;
-  /** 0–100: exibe barra de progresso */
   percentual?: number;
 }
 
@@ -113,17 +116,28 @@ export function VehicleDrawer({ veiculo, onFechar, onCentralizar }: VehicleDrawe
       setCopiado(true);
       setTimeout(() => setCopiado(false), 1800);
     } catch {
-      // Clipboard indisponível (ex.: contexto não seguro) — falha silenciosa na demo.
+      // Clipboard indisponível em contextos restritos — falha silenciosa na demo.
     }
   }
 
   return (
     <Sheet open={veiculo !== null} onOpenChange={(aberto) => !aberto && onFechar()}>
-      <SheetContent side="right" className="font-poppins rolagem-suave w-full gap-0 overflow-y-auto border-[#E7E7F0] bg-white p-0 sm:max-w-[400px]">
+      <SheetContent
+        side="right"
+        showCloseButton={false}
+        className="font-poppins rolagem-suave w-full gap-0 overflow-y-auto border-[#E7E7F0] bg-white p-0 data-[side=right]:sm:max-w-[460px]"
+      >
         {veiculo && (
           <>
             {/* Cabeçalho */}
-            <SheetHeader className="gap-3 border-b border-[#E7E7F0] bg-gradient-to-br from-[#EEF2FF] to-white p-5 pr-12">
+            <SheetHeader className="relative gap-3 border-b border-[#E7E7F0] bg-gradient-to-br from-[#EEF2FF] to-white p-6 pr-16">
+              <SheetClose
+                aria-label="Fechar detalhes do veículo"
+                title="Fechar (Esc)"
+                className="absolute right-4 top-4 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#64748B] transition-colors hover:bg-[#E2E8F0]/60 hover:text-[#1E1B4B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5]/30"
+              >
+                <X className="h-4 w-4" />
+              </SheetClose>
               <PlacaMercosul placa={veiculo.plate} tamanho="md" />
               <div>
                 <SheetTitle className="text-[17px] font-semibold text-[#1E1B4B]">{veiculo.model}</SheetTitle>
@@ -136,7 +150,12 @@ export function VehicleDrawer({ veiculo, onFechar, onCentralizar }: VehicleDrawe
                   className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold text-white"
                   style={{ background: STATUS_CONFIG[veiculo.status].cor }}
                 >
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+                  <span
+                    className={cn(
+                      "h-1.5 w-1.5 rounded-full bg-white",
+                      veiculo.status === "in_transit" && "animate-pulse"
+                    )}
+                  />
                   {STATUS_CONFIG[veiculo.status].label}
                 </span>
                 <span className="text-[10.5px] text-[#64748B]">{veiculo.lastTransmission}</span>
@@ -144,7 +163,7 @@ export function VehicleDrawer({ veiculo, onFechar, onCentralizar }: VehicleDrawe
             </SheetHeader>
 
             <div className="flex flex-col gap-5 p-5">
-              {/* Alerta ativo */}
+              {/* Alerta operacional ativo */}
               {veiculo.alerta && (
                 <div
                   className={cn(
@@ -164,17 +183,59 @@ export function VehicleDrawer({ veiculo, onFechar, onCentralizar }: VehicleDrawe
                 </div>
               )}
 
-              {/* Posição */}
+              {/* Aviso contextual de status sem posição recente */}
+              {veiculo.status === "no_position" && (
+                <div className="rounded-xl border border-[#64748B]/25 bg-[#F8FAFC] p-3 text-[11.5px] text-[#475569]">
+                  <p className="font-semibold text-[#1E1B4B]">Sem sinal nos últimos 7 dias</p>
+                  <p className="mt-0.5">
+                    Marcador exibido esmaecido na última posição conhecida. Sinaliza possível falha do equipamento ou ociosidade.
+                  </p>
+                </div>
+              )}
+
+              {/* Posição, origem e data/hora (obrigatório na V1) */}
               <section>
-                <TituloSecao>Posição no último GET</TituloSecao>
+                <TituloSecao>Posição e Origem</TituloSecao>
                 <div className="rounded-xl border border-[#E7E7F0] p-3">
+                  {/* Origem + Data/Hora em destaque */}
+                  <div className="mb-3 grid grid-cols-1 gap-2 rounded-lg bg-[#F8F8FC] p-2.5 text-[11px] sm:grid-cols-2">
+                    <div className="flex items-start gap-2">
+                      {veiculo.origemPosicao === "telemetria" ? (
+                        <Radio className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#059669]" />
+                      ) : (
+                        <Building2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#7C3AED]" />
+                      )}
+                      <div>
+                        <span className="block text-[9.5px] font-semibold uppercase tracking-[0.06em] text-[#94A3B8]">
+                          Origem da posição
+                        </span>
+                        <span className="font-semibold text-[#1E1B4B]">
+                          {veiculo.origemPosicao === "telemetria" ? "Telemetria" : "Cadastro do veículo"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-2">
+                      <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#4F46E5]" />
+                      <div>
+                        <span className="block text-[9.5px] font-semibold uppercase tracking-[0.06em] text-[#94A3B8]">
+                          Última posição
+                        </span>
+                        <span className="font-semibold text-[#1E1B4B]">
+                          {veiculo.dataHoraUltimaPosicao ?? `Alocação: ${veiculo.cidadeAlocacao}`}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="flex items-start gap-2">
                     <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#4F46E5]" />
                     <p className="text-[12px] leading-snug text-[#334155]">{veiculo.address}</p>
                   </div>
-                  <p className="mt-2 font-mono text-[11px] text-[#64748B]">
+                  <p className="mt-1.5 font-mono text-[11px] text-[#64748B]">
                     {veiculo.lat.toFixed(5)}, {veiculo.lng.toFixed(5)}
                   </p>
+
                   <div className="mt-3 grid grid-cols-3 gap-2">
                     <button
                       type="button"
@@ -205,29 +266,45 @@ export function VehicleDrawer({ veiculo, onFechar, onCentralizar }: VehicleDrawe
                 </div>
               </section>
 
-              {/* Telemetria */}
+              {/* Telemetria / Dados operacionais */}
               <section>
-                <TituloSecao>Telemetria</TituloSecao>
-                <div className="grid grid-cols-2 gap-2">
-                  <MetricaTelemetria icone={Navigation} label="Velocidade" valor={`${veiculo.speed} km/h`} />
-                  <MetricaTelemetria icone={Gauge} label="Odômetro" valor={`${formatoNumero.format(veiculo.odometer)} km`} />
-                  <MetricaTelemetria icone={Fuel} label="Combustível" valor={`${veiculo.fuelLevel}%`} percentual={veiculo.fuelLevel} />
-                  <MetricaTelemetria icone={BatteryMedium} label="Bateria" valor={`${veiculo.batteryLevel}%`} percentual={veiculo.batteryLevel} />
-                </div>
+                <TituloSecao>Telemetria e Odômetro</TituloSecao>
+                {veiculo.temTelemetria ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <MetricaTelemetria icone={Navigation} label="Velocidade" valor={`${veiculo.speed} km/h`} />
+                    <MetricaTelemetria icone={Gauge} label="Odômetro" valor={`${formatoNumero.format(veiculo.odometer)} km`} />
+                    <MetricaTelemetria icone={Fuel} label="Combustível" valor={`${veiculo.fuelLevel}%`} percentual={veiculo.fuelLevel} />
+                    <MetricaTelemetria icone={BatteryMedium} label="Bateria" valor={`${veiculo.batteryLevel}%`} percentual={veiculo.batteryLevel} />
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    <div className="rounded-xl border border-[#7C3AED]/20 bg-[#7C3AED]/[0.05] p-3 text-[11.5px] text-[#4C1D95]">
+                      Veículo sem equipamento de telemetria ativo. Posicionado no mapa pela cidade de alocação do cadastro (<strong>{veiculo.cidadeAlocacao}</strong>).
+                    </div>
+                    <MetricaTelemetria
+                      icone={Gauge}
+                      label="Odômetro cadastrado"
+                      valor={`${formatoNumero.format(veiculo.odometer)} km`}
+                    />
+                  </div>
+                )}
               </section>
 
-              {/* Alocação */}
+              {/* Alocação hierárquica */}
               <section>
                 <TituloSecao>Alocação</TituloSecao>
-                <dl className="grid grid-cols-3 gap-2 text-[11.5px]">
+                <dl className="grid grid-cols-2 gap-2 text-[11.5px]">
                   {[
-                    { label: "Grupo", valor: veiculo.grupo },
                     { label: "Filial", valor: veiculo.filial },
+                    { label: "Cidade de alocação", valor: veiculo.cidadeAlocacao },
+                    { label: "Regional / Depto.", valor: `${veiculo.regional} · ${veiculo.departamento}` },
                     { label: "Locadora", valor: veiculo.locadora },
                   ].map((item) => (
                     <div key={item.label} className="rounded-lg bg-[#F4F4F8] px-2.5 py-2">
                       <dt className="text-[10px] text-[#94A3B8]">{item.label}</dt>
-                      <dd className="truncate font-semibold text-[#1E1B4B]" title={item.valor}>{item.valor}</dd>
+                      <dd className="truncate font-semibold text-[#1E1B4B]" title={item.valor}>
+                        {item.valor}
+                      </dd>
                     </div>
                   ))}
                 </dl>

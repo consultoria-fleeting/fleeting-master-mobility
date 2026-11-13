@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 export function FleetMapSkeleton() {
   return (
     <div
-      className="relative flex h-full min-h-[420px] flex-col overflow-hidden rounded-2xl border border-[#E7E7F0] bg-white"
+      className="relative flex h-full min-h-[360px] flex-col overflow-hidden rounded-2xl border border-[#E7E7F0] bg-white"
       role="status"
       aria-label="Carregando mapa da frota"
     >
