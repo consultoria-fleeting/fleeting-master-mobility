@@ -249,16 +249,6 @@ export const VEICULOS_ATENCAO_BASE: VeiculoAtencao[] = [
     km: "22.408 km",
     revisao: "Em dia",
   },
-  {
-    placa: "ZXC3J12",
-    modelo: "Renault Master",
-    condutor: "Marcelo Tavares",
-    pendencia: "Sem posição de telemetria há 11 dias",
-    status: "Atenção",
-    filial: "São Paulo — Matriz",
-    km: "68.190 km",
-    revisao: "Em dia",
-  },
 ];
 
 export const CONDUTORES_ATENCAO_BASE: CondutorAtencao[] = [
@@ -525,8 +515,22 @@ export function obterDadosTorre(filtros: FiltrosTorre): DadosTorreConsolidados {
   const ultimoMes12 = barrasKm12Meses[barrasKm12Meses.length - 1];
   const intervaloKmRotulo = `${primeiroMes12.mes} – ${ultimoMes12.mes}`;
 
-  // Tabelas filtradas pelo escopo ativo
-  const veiculosAtencao = VEICULOS_ATENCAO_BASE.filter((v) => placasNoEscopo.has(v.placa));
+  // Tabelas filtradas pelo escopo ativo (Regra R2 + R3: todo veículo Sem posição entra na lista com o mesmo nº de dias do mapa)
+  const alertasOperacionaisEscopo = VEICULOS_ATENCAO_BASE.filter((v) => placasNoEscopo.has(v.placa));
+  const placasJaEmAtencao = new Set(alertasOperacionaisEscopo.map((v) => v.placa));
+  const semPosicaoEmAtencao: VeiculoAtencao[] = veiculosEscopo
+    .filter((v) => v.status === "no_position" && !placasJaEmAtencao.has(v.plate))
+    .map((v) => ({
+      placa: v.plate,
+      modelo: v.model,
+      condutor: v.driver === "Sem condutor vinculado" ? "—" : v.driver,
+      pendencia: `Sem posição há ${v.diasSemPosicao ?? 8} dias`,
+      status: "Atenção",
+      filial: v.filial,
+      km: `${formatoInteiro.format(v.odometer)} km`,
+      revisao: "Em dia",
+    }));
+  const veiculosAtencao = [...alertasOperacionaisEscopo, ...semPosicaoEmAtencao];
   const condutoresAtencao = CONDUTORES_ATENCAO_BASE.filter((c) => {
     const placa = c.veiculo.split(" · ")[0];
     return placasNoEscopo.has(placa);

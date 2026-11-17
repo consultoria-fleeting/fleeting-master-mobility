@@ -174,19 +174,19 @@ export function FleetMap({ comandoFoco = null, escopo }: FleetMapProps) {
     return mapaContagem;
   }, [listaFiltrada]);
 
-  /** Cor de cada região pelo ranking de quantidade de veículos do escopo */
+  /** Cor e contagem de cada região na visão Macro — acompanha o filtro de status e a busca (Ajuste #6) */
   const regioes = useMemo(() => {
     const totais = LISTA_REGIOES.map((regiao) => ({
       regiao,
       total: estados
         .filter((e) => e.regiao === regiao)
-        .reduce((soma, e) => soma + e.vehicleCount, 0),
+        .reduce((soma, e) => soma + (contagemFiltradaPorUf[e.uf] ?? 0), 0),
     })).sort((a, b) => b.total - a.total);
     return totais.map((item, i) => ({
       ...item,
       cor: ESCALA_REGIAO[Math.min(i, ESCALA_REGIAO.length - 1)],
     }));
-  }, [estados]);
+  }, [estados, contagemFiltradaPorUf]);
 
   const corPorRegiao = useMemo(
     () => Object.fromEntries(regioes.map((r) => [r.regiao, r.cor])) as Record<RegiaoBrasil, string>,

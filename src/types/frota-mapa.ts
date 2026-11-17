@@ -87,6 +87,8 @@ export interface VeiculoFrota {
   origemPosicao: OrigemPosicao;
   /** Data e hora formatadas da última posição recebida (null quando sem telemetria) */
   dataHoraUltimaPosicao: string | null;
+  /** Quantidade inteira de dias sem transmitir posição (preenchido quando `status === "no_position"`) */
+  diasSemPosicao: number | null;
   /** Cidade/UF de alocação registrada no cadastro do veículo */
   cidadeAlocacao: string;
   /** km/h */

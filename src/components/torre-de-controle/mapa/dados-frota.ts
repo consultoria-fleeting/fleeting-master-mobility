@@ -447,7 +447,6 @@ const ALERTAS_POR_PLACA = new Map<string, { alerta: AlertaVeiculo; km: number }>
   ["RDX7J99", { alerta: { nivel: "atencao", descricao: "KM 32% acima da média" }, km: 72586 }],
   ["HST3A16", { alerta: { nivel: "atencao", descricao: "Licenciamento a vencer" }, km: 54330 }],
   ["MKP2D45", { alerta: { nivel: "atencao", descricao: "Multa pendente de identificação" }, km: 22408 }],
-  ["ZXC3J12", { alerta: { nivel: "atencao", descricao: "Sem sinal de telemetria há 11 dias" }, km: 68190 }],
 ]);
 
 /* ========================================================= */
@@ -483,9 +482,10 @@ function montarVeiculo(linha: LinhaFrota, indiceNaFilial: number, indiceGlobal: 
   const temTelemetria = perfil !== "sem_telemetria" && perfil !== "oficina_sem_telemetria";
   const emOficina = perfil === "oficina_com_telemetria" || perfil === "oficina_sem_telemetria";
 
-  // Velocidade e idade da última posição conforme o perfil operacional
+  // Velocidade e idade da última posição conforme o perfil operacional (fonte única — Regra R2)
   let velocidade = 0;
   let horasDesdeUltimaPosicao: number | null = null;
+  let diasSemPosicao: number | null = null;
   let dataHoraUltimaPosicao: string | null = null;
   let lastTransmission = "";
 
@@ -528,9 +528,10 @@ function montarVeiculo(linha: LinhaFrota, indiceNaFilial: number, indiceGlobal: 
     dataHoraUltimaPosicao = `12/11/2026 às ${hora}:${minuto}`;
     lastTransmission = `O.S. aberta · Última pos. 12/11 às ${hora}:${minuto}`;
   } else {
-    // sem_posicao_7d: > 7 dias sem transmitir
+    // sem_posicao_7d: > 7 dias sem transmitir (ZXC3J12 = 8d → cruzou >7d ontem, consistente com R2 e R4)
     velocidade = 0;
-    const diasSemSinal = numeroEntre(placa + "sem", 9, 15);
+    const diasSemSinal = placa === "ZXC3J12" ? 8 : numeroEntre(placa + "sem", 9, 14);
+    diasSemPosicao = diasSemSinal;
     horasDesdeUltimaPosicao = diasSemSinal * 24;
     const diaOutubroOuNov = 13 - diasSemSinal;
     const dataFormatada =
@@ -540,7 +541,7 @@ function montarVeiculo(linha: LinhaFrota, indiceNaFilial: number, indiceGlobal: 
     const hora = String(numeroEntre(placa + "hrs", 7, 19)).padStart(2, "0");
     const minuto = String(numeroEntre(placa + "mns", 10, 55)).padStart(2, "0");
     dataHoraUltimaPosicao = `${dataFormatada} às ${hora}:${minuto}`;
-    lastTransmission = `Sem sinal há ${diasSemSinal} dias (${dataFormatada})`;
+    lastTransmission = `Sem posição há ${diasSemSinal} dias (${dataFormatada})`;
   }
 
   const status = calcularStatusVeiculoMapa({
@@ -549,6 +550,13 @@ function montarVeiculo(linha: LinhaFrota, indiceNaFilial: number, indiceGlobal: 
     horasDesdeUltimaPosicao,
     velocidade,
   });
+
+  // Regra R2 + R3: veículos Sem posição geram automaticamente o alerta com o mesmo nº de dias
+  const alertaConsolidado: AlertaVeiculo | null =
+    infoAlerta?.alerta ??
+    (status === "no_position" && diasSemPosicao !== null
+      ? { nivel: "atencao", descricao: `Sem posição há ${diasSemPosicao} dias` }
+      : null);
 
   // Coordenada: telemetria usa última posição real na via; sem telemetria usa a cidade de alocação do cadastro
   const pontoVia = filial.pontos[indiceNaFilial % filial.pontos.length];
@@ -578,10 +586,11 @@ function montarVeiculo(linha: LinhaFrota, indiceNaFilial: number, indiceGlobal: 
     emOficina,
     origemPosicao: temTelemetria ? "telemetria" : "cadastro",
     dataHoraUltimaPosicao,
+    diasSemPosicao,
     cidadeAlocacao: filial.cidadeAlocacao,
     speed: status === "in_transit" ? velocidade : 0,
     heading: temTelemetria ? numeroEntre(placa + "d", 0, 359) : 0,
-    odometer: infoAlerta?.km ?? numeroEntre(placa + "o", 12000, 95000),
+    odometer: infoAlerta?.km ?? (placa === "ZXC3J12" ? 68190 : numeroEntre(placa + "o", 12000, 95000)),
     fuelLevel: temTelemetria ? numeroEntre(placa + "f", 18, 96) : 0,
     batteryLevel: temTelemetria
       ? status === "maintenance" || status === "no_position"
@@ -599,7 +608,7 @@ function montarVeiculo(linha: LinhaFrota, indiceNaFilial: number, indiceGlobal: 
     lng,
     address,
     lastTransmission,
-    alerta: infoAlerta?.alerta ?? null,
+    alerta: alertaConsolidado,
   };
 }
 

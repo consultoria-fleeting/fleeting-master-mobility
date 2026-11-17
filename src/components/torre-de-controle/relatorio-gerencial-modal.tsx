@@ -65,8 +65,8 @@ function ColunaResumoModal({ titulo, cor, itens }: ColunaResumoModalProps) {
             key={item.id}
             className="flex items-center justify-between gap-3 py-2 first:pt-0 last:pb-0"
           >
-            <dt className="min-w-0">
-              <span className="block truncate text-[12px] font-medium text-[#334155]" title={item.label}>
+            <dt className="min-w-0 flex-1">
+              <span className="line-clamp-2 text-[12px] font-medium leading-snug text-[#334155]">
                 {item.label}
               </span>
               {item.detalhe && (
@@ -122,7 +122,7 @@ export function RelatorioGerencialModal({
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.08em] text-[#E0E7FF]">
                 <FileText className="h-3 w-3 text-[#A5B4FC]" />
-                Relatório Gerencial · V1
+                Relatório Gerencial
               </span>
               <span className="rounded-full bg-white/8 px-2.5 py-0.5 text-[10.5px] font-medium text-[#C7D2FE]">
                 Mês fechado: {dados.periodoRotulo}
@@ -172,10 +172,7 @@ export function RelatorioGerencialModal({
                     className="flex flex-col justify-between rounded-[14px] border border-[#E7E7F0] bg-white px-4 py-3"
                   >
                     <div>
-                      <p
-                        className="truncate text-[9.5px] font-semibold uppercase leading-none tracking-[0.08em] text-[#94A3B8]"
-                        title={kpi.label}
-                      >
+                      <p className="line-clamp-2 text-[9.5px] font-semibold uppercase leading-[1.25] tracking-[0.08em] text-[#94A3B8]">
                         {kpi.label}
                       </p>
                       <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -190,10 +187,7 @@ export function RelatorioGerencialModal({
                         <DeltaBadge delta={kpi.delta} bom={kpi.bom} />
                       </div>
                     </div>
-                    <p
-                      className="mt-1.5 truncate text-[10.5px] leading-tight text-[#94A3B8]"
-                      title={kpi.legenda}
-                    >
+                    <p className="mt-1.5 line-clamp-2 text-[10.5px] leading-snug text-[#94A3B8]">
                       {kpi.legenda}
                     </p>
                   </div>
@@ -222,12 +216,12 @@ export function RelatorioGerencialModal({
                       title={`${cfg.label}: ${qtd} veículos (${pct}%)`}
                       className="flex flex-col justify-between rounded-[14px] border border-[#E7E7F0] bg-white px-4 py-3"
                     >
-                      <div className="flex min-w-0 items-center gap-1.5">
+                      <div className="flex min-w-0 items-start gap-1.5">
                         <span
-                          className="h-2 w-2 shrink-0 rounded-full"
+                          className="mt-1 h-2 w-2 shrink-0 rounded-full"
                           style={{ background: cfg.cor }}
                         />
-                        <span className="truncate text-[10.5px] font-semibold text-[#64748B]">
+                        <span className="line-clamp-2 text-[10.5px] font-semibold leading-snug text-[#64748B]">
                           {cfg.label}
                         </span>
                       </div>
@@ -281,7 +275,7 @@ export function RelatorioGerencialModal({
           {/* Rodapé discreto */}
           <DialogFooter className="no-print shrink-0 items-center border-t border-[#E7E7F0] bg-white px-7 py-3.5 sm:justify-between">
             <span className="hidden text-[11px] text-[#94A3B8] sm:inline">
-              Estrutura V1 (conteúdo final em Discovery de Produto) · Na impressão, escolha “Salvar como PDF”.
+              Na janela de impressão, escolha o destino “Salvar como PDF”.
             </span>
             <div className="flex items-center gap-2">
               <Button

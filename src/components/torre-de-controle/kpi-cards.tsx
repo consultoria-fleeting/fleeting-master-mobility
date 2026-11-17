@@ -56,12 +56,12 @@ function KpiCard({ kpi, indice, onAbrir }: KpiCardProps) {
       {/* Brilho sutil no hover */}
       <span className="pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full bg-[#4F46E5]/0 blur-2xl transition-colors duration-300 group-hover:bg-[#4F46E5]/10" />
 
-      <div className="flex items-center gap-1 leading-none">
-        <span className="truncate text-[9.5px] font-semibold uppercase leading-none tracking-[0.08em] text-[#94A3B8]">
+      <div className="flex items-start gap-1">
+        <span className="line-clamp-2 text-[9.5px] font-semibold uppercase leading-[1.25] tracking-[0.07em] text-[#94A3B8]">
           {kpi.label}
         </span>
         <span
-          className="inline-flex items-center leading-none"
+          className="inline-flex shrink-0 items-center leading-none"
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}
         >
@@ -71,10 +71,10 @@ function KpiCard({ kpi, indice, onAbrir }: KpiCardProps) {
             conteudoClassName="max-w-[260px] bg-[#1E1B4B] text-[#E0E7FF] leading-relaxed"
           />
         </span>
-        <ChevronRight className="ml-auto h-3.5 w-3.5 -translate-x-1 text-[#C7D2FE] opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
+        <ChevronRight className="ml-auto h-3.5 w-3.5 shrink-0 -translate-x-1 text-[#C7D2FE] opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
       </div>
 
-      <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5">
+      <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
         <span className="whitespace-nowrap text-[20px] font-bold leading-[1.12] tracking-tight tabular-nums text-[#1E1B4B] 2xl:text-[23px]">
           {kpi.valor}
         </span>
@@ -86,7 +86,7 @@ function KpiCard({ kpi, indice, onAbrir }: KpiCardProps) {
         <DeltaBadge delta={kpi.delta} bom={kpi.bom} />
       </div>
 
-      <p className="mt-1 truncate text-[10.5px] leading-tight text-[#94A3B8]">{kpi.legenda}</p>
+      <p className="mt-1 line-clamp-2 text-[10.5px] leading-snug text-[#94A3B8]">{kpi.legenda}</p>
     </div>
   );
 }
