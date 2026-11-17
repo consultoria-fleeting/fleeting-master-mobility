@@ -1,10 +1,14 @@
 /**
  * LogoMenu — Marca exibida no topo do menu lateral.
  *
- * - Menu recolhido: ícone pequeno do Master Mobility (`iconeSite.png`), em branco.
- * - Menu expandido: logo do Master Mobility (`logo.png`), em branco.
- * - Menu expandido nas rotas do Ranking de Condutores: logo do DriverScore
- *   (`DriverScore_Horizontal_Negativo.svg`), já nas cores corretas.
+ * - Menu recolhido nas rotas do DriverScore (`/ranking-condutores*`):
+ *   ícone vetorial do DriverScore (`DriverScore_Icone_Negativo.svg`), sem texto.
+ * - Menu recolhido nas demais rotas:
+ *   ícone do Master Mobility (`iconeSite.png`), em branco.
+ * - Menu expandido nas rotas do DriverScore (`/ranking-condutores*`):
+ *   logo horizontal do DriverScore (`DriverScore_Horizontal_Negativo.svg`).
+ * - Menu expandido nas demais rotas:
+ *   logo do Master Mobility (`logo.png`), em branco.
  *
  * Os PNGs originais são azuis; o filtro `brightness-0 invert` os deixa brancos
  * sem precisar de uma segunda versão do arquivo.
@@ -16,6 +20,7 @@
 
 import Image from "next/image";
 import logoDriverScore from "../../public/DriverScore_Horizontal_Negativo.svg";
+import iconeDriverScore from "../../public/DriverScore_Icone_Negativo.svg";
 import iconeMasterMobility from "../../public/iconeSite.png";
 import logoMasterMobility from "../../public/logo.png";
 import { cn } from "@/lib/utils";
@@ -23,7 +28,7 @@ import { cn } from "@/lib/utils";
 interface LogoMenuProps {
   /** Menu lateral recolhido (apenas ícones) */
   colapsado: boolean;
-  /** Rota atual pertence ao Ranking de Condutores (exibe a marca DriverScore) */
+  /** Rota atual pertence ao DriverScore (`/ranking-condutores*`) */
   ehRankingCondutores: boolean;
 }
 
@@ -32,13 +37,25 @@ const CLASSE_BRANCO = "brightness-0 invert";
 
 export function LogoMenu({ colapsado, ehRankingCondutores }: LogoMenuProps) {
   if (colapsado) {
+    if (ehRankingCondutores) {
+      return (
+        <Image
+          src={iconeDriverScore}
+          alt="DriverScore"
+          unoptimized
+          preload
+          className="h-auto w-9 shrink-0"
+        />
+      );
+    }
+
     return (
       <Image
         src={iconeMasterMobility}
         alt="Master Mobility"
         unoptimized
-        priority
-        className={cn("h-auto w-6 shrink-0", CLASSE_BRANCO)}
+        preload
+        className={cn("h-auto w-9 shrink-0", CLASSE_BRANCO)}
       />
     );
   }
@@ -47,9 +64,9 @@ export function LogoMenu({ colapsado, ehRankingCondutores }: LogoMenuProps) {
     return (
       <Image
         src={logoDriverScore}
-        alt="DriverScore — Ranking de Condutores"
+        alt="DriverScore"
         unoptimized
-        priority
+        preload
         className="h-auto w-44 max-w-full"
       />
     );
@@ -60,7 +77,7 @@ export function LogoMenu({ colapsado, ehRankingCondutores }: LogoMenuProps) {
       src={logoMasterMobility}
       alt="Master Mobility by Fleeting"
       unoptimized
-      priority
+      preload
       className={cn("h-auto w-46 max-w-full", CLASSE_BRANCO)}
     />
   );

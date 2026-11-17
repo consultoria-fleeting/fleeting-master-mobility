@@ -3,7 +3,7 @@
  *
  * Integrada ao backend `api-driver-scoring` (seção 4.7 da spec):
  * - Seletor de período (mês/ano) e filtros hierárquicos em cascata
- * - Cards de eventos agrupados em 3 faixas de cores (Roxo, Vermelho e Amarelo) — clique abre o detalhe (4.9)
+ * - Cards de eventos agrupados em 4 faixas de cores (`CRITICAL` = Preto, `HIGH` = Roxo, `MEDIUM` = Vermelho, `LOW` = Amarelo) — clique abre o detalhe (4.9)
  *
  * Rota: /ranking-condutores/dashboard-parametros
  */

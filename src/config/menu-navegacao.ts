@@ -27,7 +27,6 @@ import {
   Handshake,
   Headset,
   LayoutDashboard,
-  LayoutGrid,
   ReceiptText,
   Satellite,
   Settings2,
@@ -39,6 +38,7 @@ import {
   Wrench,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { HomeMinimalIcon } from "@/components/icons/home-minimal-icon";
 
 export type DestinoMenu = "interno" | "legado";
 
@@ -87,7 +87,7 @@ export const ITENS_MENU: ItemMenu[] = [
     tipo: "grupo",
     id: "master-mobility",
     label: "MasterMobility",
-    icone: LayoutGrid,
+    icone: HomeMinimalIcon,
     fechadoPorPadraoEm: "/ranking-condutores",
     filhos: [
       legado("Painel de Gestão", "/painel-de-gestao/", LayoutDashboard),

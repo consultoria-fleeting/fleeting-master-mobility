@@ -18,17 +18,23 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
+import type { ReactElement } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   LogOut,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   X,
 } from "lucide-react";
 import { LogoMenu } from "@/components/logo-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   ITENS_MENU,
   type ItemMenuGrupo,
@@ -60,6 +66,28 @@ const CLASSE_ITEM_ATIVO =
 const CLASSE_ITEM_INATIVO =
   "hover:bg-[hsl(var(--sidebar-accent)/0.3)] opacity-80 hover:opacity-100";
 
+/** Envolve um elemento interativo da barra recolhida com Tooltip alinhado à direita */
+function TooltipMenuLateral({
+  rotulo,
+  ativo = true,
+  children,
+}: {
+  rotulo: string;
+  ativo?: boolean;
+  children: ReactElement;
+}) {
+  if (!ativo) return children;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger render={children} />
+      <TooltipContent side="right" sideOffset={10} className="text-xs font-medium">
+        {rotulo}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 /* ========================================================= */
 /*  COMPONENTE                                               */
 /* ========================================================= */
@@ -77,9 +105,12 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
   /** Aberto/fechado escolhido pelo usuário. Sem escolha, o grupo abre se contiver a rota atual. */
   const [gruposAbertos, setGruposAbertos] = useState<Record<string, boolean>>({});
 
+  /** No drawer mobile, o menu sempre aparece expandido com os rótulos */
+  const menuColapsado = colapsado && !mobileAberto;
+
   /** Rotas da Torre de Controle usam a nova identidade Índigo */
   const ehTorreDeControle = pathname.startsWith("/torre-de-controle");
-  /** Rotas do Ranking de Condutores exibem a marca DriverScore no menu expandido */
+  /** Rotas do DriverScore (`/ranking-condutores*`) exibem a marca/ícone DriverScore */
   const ehRankingCondutores = pathname.startsWith("/ranking-condutores");
 
   /** Verifica se um link interno está ativo (match exato ou prefixo). Links do legado ou desabilitados nunca estão ativos aqui. */
@@ -112,7 +143,7 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
 
   function alternarGrupo(grupo: ItemMenuGrupo) {
     // Com o menu colapsado, clicar no ícone do grupo expande o menu já com o grupo aberto
-    if (colapsado) {
+    if (menuColapsado) {
       setColapsado(false);
       setGruposAbertos((atual) => ({ ...atual, [grupo.id]: true }));
       return;
@@ -120,10 +151,11 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
     setGruposAbertos((atual) => ({ ...atual, [grupo.id]: !grupoEstaAberto(grupo) }));
   }
 
-  function obterRecuoNivel(nivel: number): string {
-    if (colapsado || nivel === 0) return "px-3";
-    if (nivel === 1) return "pl-6 pr-3";
-    return "pl-10 pr-3";
+  function obterClassesEspacamentoItem(nivel: number): string {
+    if (menuColapsado) return "mx-auto h-10 w-10 justify-center p-0";
+    if (nivel === 0) return "w-full px-3 py-2.5";
+    if (nivel === 1) return "w-full pl-6 pr-3 py-2.5";
+    return "w-full pl-10 pr-3 py-2.5";
   }
 
   /** Renderiza um link (interno com next/link; legado com <a> e URL do ambiente atual) */
@@ -132,14 +164,14 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
     const subItem = nivel > 0;
     const Icone = item.icone;
     const classes = `
-      ${CLASSE_ITEM_BASE} py-2.5
-      ${obterRecuoNivel(nivel)}
+      ${CLASSE_ITEM_BASE}
+      ${obterClassesEspacamentoItem(nivel)}
       ${ativo ? CLASSE_ITEM_ATIVO : CLASSE_ITEM_INATIVO}
     `;
     const conteudo = (
       <>
         <Icone className={`${subItem ? "w-4 h-4" : "w-5 h-5"} shrink-0`} />
-        {!colapsado && (
+        {!menuColapsado && (
           <span className={`truncate ${subItem ? "text-[13px]" : ""}`}>{item.label}</span>
         )}
       </>
@@ -147,45 +179,46 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
 
     if (item.desabilitado) {
       return (
-        <span
+        <TooltipMenuLateral
           key={item.path}
-          aria-disabled="true"
-          title={colapsado ? `${item.label} (Disponível na V2)` : "Disponível na V2"}
-          className={`
-            ${CLASSE_ITEM_BASE} py-2.5
-            ${obterRecuoNivel(nivel)}
-            opacity-40 cursor-not-allowed select-none
-          `}
+          rotulo={menuColapsado ? `${item.label} (Disponível na V2)` : "Disponível na V2"}
         >
-          {conteudo}
-        </span>
+          <span
+            tabIndex={0}
+            aria-disabled="true"
+            className={`
+              ${CLASSE_ITEM_BASE}
+              ${obterClassesEspacamentoItem(nivel)}
+              opacity-40 cursor-not-allowed select-none
+            `}
+          >
+            {conteudo}
+          </span>
+        </TooltipMenuLateral>
       );
     }
 
     if (item.destino === "legado") {
       return (
-        <a
-          key={item.path}
-          href={getLegacyUrl(item.path, ambiente)}
-          className={classes}
-          title={colapsado ? item.label : undefined}
-        >
-          {conteudo}
-        </a>
+        <TooltipMenuLateral key={item.path} rotulo={item.label} ativo={menuColapsado}>
+          <a href={getLegacyUrl(item.path, ambiente)} className={classes}>
+            {conteudo}
+          </a>
+        </TooltipMenuLateral>
       );
     }
 
     return (
-      <Link
-        key={item.path}
-        href={item.path}
-        onClick={() => setMobileAberto(false)}
-        className={classes}
-        title={colapsado ? item.label : undefined}
-        aria-current={ativo ? "page" : undefined}
-      >
-        {conteudo}
-      </Link>
+      <TooltipMenuLateral key={item.path} rotulo={item.label} ativo={menuColapsado}>
+        <Link
+          href={item.path}
+          onClick={() => setMobileAberto(false)}
+          className={classes}
+          aria-current={ativo ? "page" : undefined}
+        >
+          {conteudo}
+        </Link>
+      </TooltipMenuLateral>
     );
   }
 
@@ -196,34 +229,42 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
     const subGrupo = nivel > 0;
     const Icone = grupo.icone;
 
+    const classesEstadoGrupo = contemAtivo
+      ? menuColapsado
+        ? "bg-[hsl(var(--sidebar-accent)/0.55)] text-[hsl(var(--sidebar-accent-foreground))] ring-1 ring-white/10 opacity-100"
+        : "opacity-100 font-semibold"
+      : CLASSE_ITEM_INATIVO;
+
     return (
       <div key={grupo.id}>
-        <button
-          type="button"
-          onClick={() => alternarGrupo(grupo)}
-          aria-expanded={aberto}
-          title={colapsado ? grupo.label : undefined}
-          className={`
-            ${CLASSE_ITEM_BASE} w-full py-2.5
-            ${obterRecuoNivel(nivel)}
-            ${contemAtivo ? "opacity-100 font-semibold" : CLASSE_ITEM_INATIVO}
-            hover:bg-[hsl(var(--sidebar-accent)/0.3)]
-          `}
-        >
-          <Icone className={`${subGrupo ? "w-4 h-4" : "w-5 h-5"} shrink-0`} />
-          {!colapsado && (
-            <>
-              <span className={`truncate text-left flex-1 ${subGrupo ? "text-[13px]" : ""}`}>
-                {grupo.label}
-              </span>
-              <ChevronDown
-                className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${aberto ? "rotate-180" : ""}`}
-              />
-            </>
-          )}
-        </button>
+        <TooltipMenuLateral rotulo={grupo.label} ativo={menuColapsado}>
+          <button
+            type="button"
+            onClick={() => alternarGrupo(grupo)}
+            aria-expanded={aberto}
+            aria-label={menuColapsado ? grupo.label : undefined}
+            className={`
+              ${CLASSE_ITEM_BASE}
+              ${obterClassesEspacamentoItem(nivel)}
+              ${classesEstadoGrupo}
+              hover:bg-[hsl(var(--sidebar-accent)/0.35)]
+            `}
+          >
+            <Icone className={`${subGrupo ? "w-4 h-4" : "w-5 h-5"} shrink-0`} />
+            {!menuColapsado && (
+              <>
+                <span className={`truncate text-left flex-1 ${subGrupo ? "text-[13px]" : ""}`}>
+                  {grupo.label}
+                </span>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${aberto ? "rotate-180" : ""}`}
+                />
+              </>
+            )}
+          </button>
+        </TooltipMenuLateral>
 
-        {aberto && !colapsado && (
+        {aberto && !menuColapsado && (
           <div className="mt-1 space-y-1">
             {grupo.filhos.map((filho) =>
               filho.tipo === "grupo"
@@ -252,45 +293,65 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
       <aside
         className={`
           fixed lg:static inset-y-0 left-0 z-50
-          flex flex-col
+          flex shrink-0 flex-col
           bg-[hsl(var(--sidebar-background))] text-[hsl(var(--sidebar-foreground))]
           transition-all duration-300
-          ${colapsado ? "w-[70px]" : "w-68"}
+          w-68 ${menuColapsado ? "lg:w-[72px]" : "lg:w-68"}
           ${mobileAberto ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
       >
-        {/* Header do sidebar: marca + botões (recolhido: ícone e seta lado a lado) */}
+        {/* Header: recolhido => marca centralizada com morph suave em hover para expandir; expandido => marca + botão recolher */}
         <div
-          className={`flex h-16 shrink-0 items-center border-b border-[hsl(var(--sidebar-divider))] ${colapsado
-            ? "justify-center gap-1 px-2"
-            : "justify-between gap-2 px-4"
-            }`}
+          className={`flex h-16 shrink-0 items-center border-b border-[hsl(var(--sidebar-divider))] ${
+            menuColapsado ? "justify-center px-2" : "justify-between gap-2 px-4"
+          }`}
         >
-          <div className={`flex min-w-0 items-center ${colapsado ? "shrink-0" : "flex-1"}`}>
-            <LogoMenu colapsado={colapsado} ehRankingCondutores={ehRankingCondutores} />
-          </div>
+          {menuColapsado ? (
+            <TooltipMenuLateral rotulo="Expandir menu">
+              <button
+                type="button"
+                onClick={() => setColapsado(false)}
+                aria-label="Expandir menu"
+                className="group/marca relative flex h-11 w-12 cursor-pointer items-center justify-center rounded-xl transition-all duration-200 hover:bg-[hsl(var(--sidebar-accent)/0.55)] hover:ring-1 hover:ring-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+              >
+                <span className="flex items-center justify-center transition-all duration-200 ease-out motion-reduce:transition-none group-hover/marca:scale-75 group-hover/marca:opacity-0 group-focus-visible/marca:scale-75 group-focus-visible/marca:opacity-0">
+                  <LogoMenu colapsado ehRankingCondutores={ehRankingCondutores} />
+                </span>
+                <PanelLeftOpen
+                  aria-hidden="true"
+                  className="pointer-events-none absolute h-5 w-5 scale-75 opacity-0 transition-all duration-200 ease-out motion-reduce:transition-none group-hover/marca:scale-100 group-hover/marca:opacity-100 group-focus-visible/marca:scale-100 group-focus-visible/marca:opacity-100"
+                />
+              </button>
+            </TooltipMenuLateral>
+          ) : (
+            <>
+              <div className="flex min-w-0 flex-1 items-center">
+                <LogoMenu colapsado={false} ehRankingCondutores={ehRankingCondutores} />
+              </div>
 
-          {/* Botão colapsar (desktop) */}
-          <button
-            onClick={() => setColapsado(!colapsado)}
-            className="hidden lg:block shrink-0 p-1 rounded hover:bg-[hsl(var(--sidebar-accent)/0.5)] transition-colors"
-            aria-label={colapsado ? "Expandir menu" : "Colapsar menu"}
-          >
-            {colapsado ? (
-              <ChevronRight className="w-4 h-4" />
-            ) : (
-              <ChevronLeft className="w-4 h-4" />
-            )}
-          </button>
+              {/* Botão recolher no header (desktop expandido) */}
+              <TooltipMenuLateral rotulo="Recolher menu">
+                <button
+                  type="button"
+                  onClick={() => setColapsado(true)}
+                  aria-label="Recolher menu"
+                  className="hidden lg:flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg opacity-75 transition-all hover:bg-[hsl(var(--sidebar-accent)/0.5)] hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                >
+                  <PanelLeftClose className="h-4 w-4" />
+                </button>
+              </TooltipMenuLateral>
 
-          {/* Botão fechar (mobile) */}
-          <button
-            onClick={() => setMobileAberto(false)}
-            className="lg:hidden shrink-0 p-1"
-            aria-label="Fechar menu"
-          >
-            <X className="w-5 h-5" />
-          </button>
+              {/* Botão fechar (mobile) */}
+              <button
+                type="button"
+                onClick={() => setMobileAberto(false)}
+                className="lg:hidden shrink-0 p-1"
+                aria-label="Fechar menu"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </>
+          )}
         </div>
 
         {/* Navegação */}
@@ -300,11 +361,13 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
           )}
         </nav>
 
-        {/* Footer: usuário + botão sair na mesma linha (recolhido: só o botão sair) */}
+        {/* Footer: expandido => perfil + sair; recolhido => apenas botão sair centralizado */}
         <div
-          className={`flex items-center gap-3 p-3 border-t border-[hsl(var(--sidebar-divider))] ${colapsado ? "justify-center" : ""}`}
+          className={`flex items-center gap-3 border-t border-[hsl(var(--sidebar-divider))] p-3 ${
+            menuColapsado ? "justify-center" : ""
+          }`}
         >
-          {!colapsado && (
+          {!menuColapsado && (
             <div className="flex min-w-0 flex-1 items-center gap-3 px-1">
               <div className="w-8 h-8 shrink-0 rounded-full bg-[hsl(var(--sidebar-accent))] flex items-center justify-center text-xs font-bold">
                 {perfilUsuario.iniciais}
@@ -319,16 +382,20 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
               </div>
             </div>
           )}
-          <button
-            id="menu-sair"
-            type="button"
-            onClick={logout}
-            title="Sair"
-            aria-label="Sair"
-            className="shrink-0 rounded-lg p-2 opacity-70 transition-colors hover:opacity-100 hover:bg-[hsl(var(--sidebar-accent)/0.4)]"
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
+
+          <TooltipMenuLateral rotulo="Sair">
+            <button
+              id="menu-sair"
+              type="button"
+              onClick={logout}
+              aria-label="Sair"
+              className={`shrink-0 cursor-pointer rounded-lg opacity-70 transition-colors hover:bg-[hsl(var(--sidebar-accent)/0.4)] hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 ${
+                menuColapsado ? "flex h-10 w-10 items-center justify-center" : "p-2"
+              }`}
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </TooltipMenuLateral>
         </div>
       </aside>
 

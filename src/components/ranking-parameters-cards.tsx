@@ -1,7 +1,8 @@
 /**
  * RankingParametersCards — Eventos por nível de exposição (seção 4.7 da spec).
  *
- * `GET /dashboard/ranking-parameters`: grupos `CRITICAL`, `HIGH`, `MEDIUM` e `LOW`.
+ * `GET /dashboard/ranking-parameters`: grupos `CRITICAL` (Preto), `HIGH` (Roxo), `MEDIUM` (Vermelho) e `LOW` (Amarelo),
+ * usando `EXPOSURE_LEVELS` como fonte única de cores.
  * O nome de cada card vem do `label` da API (traduzido pela matriz da organização) e cada grupo é ordenado
  * por `total` decrescente. Clicar em um card abre o detalhe (4.9) preservando período e filtros.
  *
@@ -30,38 +31,6 @@ interface RankingParametersCardsProps {
   mes: number;
   filtros: DashboardHierarchyFilters;
 }
-
-/**
- * Grupos visuais de cards na tela de Parâmetros do Ranking (padrão Lovable):
- * 1. Roxo: mais críticos (`CRITICAL`)
- * 2. Vermelho: alta/média exposição (`HIGH`)
- * 3. Amarelo: demais parâmetros (`MEDIUM` e `LOW` unificados no mesmo bloco)
- */
-const VISUAL_GROUPS: {
-  id: string;
-  levels: ExposureLevelBucket[];
-  bgClassName: string;
-  textClassName: string;
-}[] = [
-  {
-    id: "critico",
-    levels: ["CRITICAL"],
-    bgClassName: "bg-[#9B23AB]",
-    textClassName: "text-white",
-  },
-  {
-    id: "alto",
-    levels: ["HIGH"],
-    bgClassName: "bg-[#FF0000]",
-    textClassName: "text-white",
-  },
-  {
-    id: "demais",
-    levels: ["MEDIUM", "LOW"],
-    bgClassName: "bg-[#EEDA2B]",
-    textClassName: "text-black",
-  },
-];
 
 /** Ordena do evento com mais ocorrências para o com menos (sem alterar o array original). */
 function sortByTotalDesc<T extends { total: number }>(events: T[]): T[] {
@@ -96,17 +65,13 @@ export function RankingParametersCards({ ano, mes, filtros }: RankingParametersC
       skeleton={<ListSkeleton linhas={6} />}
     >
       <div className="space-y-6">
-        {VISUAL_GROUPS.map(({ id, levels, bgClassName, textClassName }) => {
-          const events = sortByTotalDesc(
-            levels.flatMap((level) =>
-              (data?.[level] ?? []).map((event) => ({ ...event, level })),
-            ),
-          );
+        {EXPOSURE_LEVELS.map(({ level, bgClassName, textClassName }) => {
+          const events = sortByTotalDesc(data?.[level] ?? []);
           if (events.length === 0) return null;
 
           return (
             <div
-              key={id}
+              key={level}
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
             >
               {events.map((event) => (
@@ -117,7 +82,7 @@ export function RankingParametersCards({ ano, mes, filtros }: RankingParametersC
                   icone={getEventTypeIcon(event.event_type)}
                   bgClasse={bgClassName}
                   textoClasse={textClassName}
-                  onClick={() => handleCardClick(event.event_type, event.level)}
+                  onClick={() => handleCardClick(event.event_type, level)}
                 />
               ))}
             </div>
